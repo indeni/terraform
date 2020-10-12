@@ -3,6 +3,7 @@ package jsonplan
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"sort"
 
 	"github.com/zclconf/go-cty/cty"
@@ -70,6 +71,7 @@ type change struct {
 	Before       json.RawMessage `json:"before,omitempty"`
 	After        json.RawMessage `json:"after,omitempty"`
 	AfterUnknown json.RawMessage `json:"after_unknown,omitempty"`
+	RawData json.RawMessage `json:"raw_data,omitempty"`
 }
 
 type output struct {
@@ -225,11 +227,14 @@ func (p *plan) marshalResourceChanges(changes *plans.Changes, schemas *terraform
 			return err
 		}
 
+		rawData, _ := p.marshalRawData(rc.Config)
+
 		r.Change = change{
 			Actions:      actionString(rc.Action.String()),
 			Before:       json.RawMessage(before),
 			After:        json.RawMessage(after),
 			AfterUnknown: a,
+			RawData: rawData,
 		}
 
 		if rc.DeposedKey != states.NotDeposed {
@@ -263,6 +268,23 @@ func (p *plan) marshalResourceChanges(changes *plans.Changes, schemas *terraform
 	})
 
 	return nil
+}
+
+
+type RawData struct {
+	FileName string
+	StartLine  int
+	EndLine  int
+}
+
+func (p *plan) marshalRawData(rawData interface{}) ([]byte, error){
+	switch x := rawData.(type) {
+	case *hclsyntax.Body:
+		sourceRange := x.SrcRange
+		rawData := &RawData{FileName: sourceRange.Filename, StartLine: sourceRange.Start.Line, EndLine: sourceRange.End.Line}
+		return json.Marshal(rawData)
+	}
+	return nil, nil
 }
 
 func (p *plan) marshalOutputChanges(changes *plans.Changes) error {

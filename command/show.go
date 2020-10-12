@@ -2,6 +2,10 @@ package command
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform/addrs"
+	"github.com/hashicorp/terraform/configs/configload"
+	"github.com/hashicorp/terraform/plugin/discovery"
+	"github.com/hashicorp/terraform/terraform"
 	"os"
 	"strings"
 
@@ -21,6 +25,7 @@ import (
 // contents of a Terraform plan or state file.
 type ShowCommand struct {
 	Meta
+	providerInstaller discovery.Installer
 }
 
 func (c *ShowCommand) Run(args []string) int {
@@ -31,7 +36,11 @@ func (c *ShowCommand) Run(args []string) int {
 
 	cmdFlags := c.Meta.defaultFlagSet("show")
 	var jsonOutput bool
+	var generateIdFromAddress bool
+	var pluginCacheDir string
 	cmdFlags.BoolVar(&jsonOutput, "json", false, "produce JSON output")
+	cmdFlags.BoolVar(&generateIdFromAddress, "generate-id-from-address", false, "generate unknown ids from address")
+	cmdFlags.StringVar(&pluginCacheDir, "plugin-cache-dir", "", "plugin cache dir")
 	cmdFlags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := cmdFlags.Parse(args); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error parsing command-line flags: %s\n", err.Error()))
@@ -100,6 +109,39 @@ func (c *ShowCommand) Run(args []string) int {
 	}
 
 	// Get the context
+	parseResourcesFromPlanFile:= !generateIdFromAddress
+	var planErr, stateErr error
+	var plan *plans.Plan
+	var stateFile *statefile.File
+	path := args[0]
+	plan, stateFile, planErr = getPlanFromPath(path, parseResourcesFromPlanFile)
+	snap, _ := opReq.PlanFile.ReadConfigSnapshot()
+	loader := configload.NewLoaderFromSnapshot(snap)
+	config, _ := loader.LoadConfig(snap.Modules[""].Dir)
+	deps := terraform.ConfigTreeDependencies(config, stateFile.State)
+	allReqs := deps.AllPluginRequirements()
+
+	if pluginCacheDir != "" {
+		c.PluginCacheDir = pluginCacheDir
+	}
+
+	c.providerInstaller = &discovery.ProviderInstaller{
+		Dir:                   c.pluginDir(),
+		Cache:                 c.pluginCache(),
+		PluginProtocolVersion: discovery.PluginInstallProtocolVersion,
+		SkipVerify:            false,
+		Ui:                    c.Ui,
+		Services:              c.Services,
+	}
+
+	for provider, reqd := range allReqs {
+		pty := addrs.NewLegacyProvider(provider)
+		c.providerInstaller.Get(pty, reqd.Versions)
+	}
+
+	local.UpdateProviderResolver(c.providerResolver())
+
+
 	ctx, _, ctxDiags := local.Context(opReq)
 	diags = diags.Append(ctxDiags)
 	if ctxDiags.HasErrors() {
@@ -110,15 +152,22 @@ func (c *ShowCommand) Run(args []string) int {
 	// Get the schemas from the context
 	schemas := ctx.Schemas()
 
-	var planErr, stateErr error
-	var plan *plans.Plan
-	var stateFile *statefile.File
 
 	// if a path was provided, try to read it as a path to a planfile
 	// if that fails, try to read the cli argument as a path to a statefile
 	if len(args) > 0 {
 		path := args[0]
-		plan, stateFile, planErr = getPlanFromPath(path)
+		plan, stateFile, planErr = getPlanFromPath(path, parseResourcesFromPlanFile)
+		if generateIdFromAddress {
+			validateDiags := ctx.Validate()
+			diags = diags.Append(validateDiags)
+			if diags.HasErrors() {
+				c.showDiagnostics(diags)
+				return 1
+			}
+			ctx.EnableGenerateIdFromAddress()
+			plan, _ = ctx.Plan()
+		}
 		if planErr != nil {
 			stateFile, stateErr = getStateFromPath(path)
 			if stateErr != nil {
@@ -214,12 +263,12 @@ func (c *ShowCommand) Synopsis() string {
 // getPlanFromPath returns a plan and statefile if the user-supplied path points
 // to a planfile. If both plan and error are nil, the path is likely a
 // directory. An error could suggest that the given path points to a statefile.
-func getPlanFromPath(path string) (*plans.Plan, *statefile.File, error) {
+func getPlanFromPath(path string, parseResourcesFromPlanFile bool) (*plans.Plan, *statefile.File, error) {
 	pr, err := planfile.Open(path)
 	if err != nil {
 		return nil, nil, err
 	}
-	plan, err := pr.ReadPlan()
+	plan, err := pr.ReadPlan(parseResourcesFromPlanFile)
 	if err != nil {
 		return nil, nil, err
 	}

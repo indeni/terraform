@@ -86,7 +86,7 @@ type Context struct {
 	variables InputValues
 	meta      *ContextMeta
 	destroy   bool
-
+	generateIdFromAddress bool
 	hooks      []Hook
 	components contextComponentFactory
 	schemas    *Schemas
@@ -236,6 +236,10 @@ func NewContext(opts *ContextOpts) (*Context, tfdiags.Diagnostics) {
 
 func (c *Context) Schemas() *Schemas {
 	return c.schemas
+}
+
+func (c *Context) EnableGenerateIdFromAddress()  {
+	c.generateIdFromAddress = true
 }
 
 type ContextGraphOpts struct {

@@ -72,6 +72,7 @@ func (w *ContextGraphWalker) EnterPath(path addrs.ModuleInstance) EvalContext {
 		Schemas:            w.Context.schemas,
 		VariableValues:     w.variableValues,
 		VariableValuesLock: &w.variableValuesLock,
+		GenerateIdFromAddress: w.Context.generateIdFromAddress,
 	}
 
 	ctx := &BuiltinEvalContext{

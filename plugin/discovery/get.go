@@ -174,7 +174,24 @@ func (i *ProviderInstaller) Get(provider addrs.Provider, req Constraints) (Plugi
 	}
 
 	// we now have a winning platform-compatible version
-	versionMeta := versions[0]
+
+	versionMeta:= versions[0]
+
+	// find best version in cache
+	log.Printf("[DEBUG] looking in cache for supported version")
+	if i.Cache != nil {
+		for _, version := range versions {
+			v := VersionStr(version.Version).MustParse()
+			log.Printf("[DEBUG] looking for cached version  %s: %s", provider.Type, version.Version)
+			cached := i.Cache.CachedPluginPath("provider", provider.Type, v)
+			if cached != "" {
+				log.Printf("[DEBUG] found in cache supproted version %s", version.Version)
+				versionMeta = version
+				break
+			}
+		}
+	}
+
 	v := VersionStr(versionMeta.Version).MustParse()
 
 	// check protocol compatibility
@@ -233,7 +250,6 @@ func (i *ProviderInstaller) Get(provider addrs.Provider, req Constraints) (Plugi
 	}
 
 	printedProviderName := fmt.Sprintf("%q (%s)", provider.LegacyString(), providerSource)
-	i.Ui.Info(fmt.Sprintf("- Downloading plugin for provider %s %s...", printedProviderName, versionMeta.Version))
 	log.Printf("[DEBUG] getting provider %s version %q", printedProviderName, versionMeta.Version)
 	err = i.install(provider, v, providerURL)
 	if err != nil {

@@ -47,6 +47,7 @@ func (c *InitCommand) Run(args []string) int {
 	var flagBackend, flagGet, flagUpgrade bool
 	var flagPluginPath FlagStringSlice
 	var flagVerifyPlugins bool
+	var pluginCacheDir string
 	flagConfigExtra := newRawFlags("-backend-config")
 
 	args, err := c.Meta.process(args, false)
@@ -55,6 +56,7 @@ func (c *InitCommand) Run(args []string) int {
 	}
 
 	cmdFlags := c.Meta.extendedFlagSet("init")
+
 	cmdFlags.BoolVar(&flagBackend, "backend", true, "")
 	cmdFlags.Var(flagConfigExtra, "backend-config", "")
 	cmdFlags.StringVar(&flagFromModule, "from-module", "", "copy the source of the given module into the directory before init")
@@ -67,6 +69,7 @@ func (c *InitCommand) Run(args []string) int {
 	cmdFlags.BoolVar(&flagUpgrade, "upgrade", false, "")
 	cmdFlags.Var(&flagPluginPath, "plugin-dir", "plugin directory")
 	cmdFlags.BoolVar(&flagVerifyPlugins, "verify-plugins", true, "verify plugins")
+	cmdFlags.StringVar(&pluginCacheDir, "plugin-cache-dir", "", "plugin cache dir")
 	cmdFlags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := cmdFlags.Parse(args); err != nil {
 		return 1
@@ -77,6 +80,10 @@ func (c *InitCommand) Run(args []string) int {
 	if len(flagPluginPath) > 0 {
 		c.pluginPath = flagPluginPath
 		c.getPlugins = false
+	}
+
+	if pluginCacheDir != "" {
+		c.PluginCacheDir = pluginCacheDir
 	}
 
 	// set providerInstaller if we don't have a test version already

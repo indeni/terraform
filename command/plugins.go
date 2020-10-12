@@ -92,20 +92,24 @@ func (r *multiVersionProviderResolver) ResolveProviders(
 			factories[addrs.NewLegacyProvider(name)] = unmanagedProviderFactory(addrs.NewLegacyProvider(name), reattach)
 			continue
 		}
-
+		//providerInstaller discovery.Installer
+		//discovery.Installer.Get(addrs.NewLegacyProvider(name), reqd)
 		if newest, available := chosen[name]; available {
-			digest, err := newest.SHA256()
-			if err != nil {
-				errs = append(errs, fmt.Errorf("provider.%s: failed to load plugin to verify its signature: %s", name, err))
-				continue
-			}
-			if !reqd[name].AcceptsSHA256(digest) {
-				errs = append(errs, fmt.Errorf("provider.%s: new or changed plugin executable", name))
-				continue
-			}
+			//digest, err := newest.SHA256()
+			//if err != nil {
+			//	errs = append(errs, fmt.Errorf("provider.%s: failed to load plugin to verify its signature: %s", name, err))
+			//	continue
+			//}
+			//if !reqd[name].AcceptsSHA256(digest) {
+			//	errs = append(errs, fmt.Errorf("provider.%s: new or changed plugin executable", name))
+			//	continue
+			//}
 
 			factories[addrs.NewLegacyProvider(name)] = providerFactory(newest)
 		} else {
+			pty := addrs.NewLegacyProvider(name)
+			fmt.Println(pty)
+			//_, providerDiags, err := discovery.Installer.Get(pty, req.Versions)
 			msg := fmt.Sprintf("provider.%s: no suitable version installed", name)
 
 			required := req.Versions.String()

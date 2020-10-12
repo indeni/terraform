@@ -134,6 +134,7 @@ func (n *NodePlannableResourceInstance) evalTreeDataResource(addr addrs.AbsResou
 				Addr:           addr.Resource,
 				ProviderSchema: &providerSchema,
 				Change:         &change,
+				Config: config.Config,
 			},
 		},
 	}
@@ -194,6 +195,7 @@ func (n *NodePlannableResourceInstance) evalTreeManagedResource(addr addrs.AbsRe
 				Addr:           addr.Resource,
 				ProviderSchema: &providerSchema,
 				Change:         &change,
+				Config: config.Config,
 			},
 		},
 	}

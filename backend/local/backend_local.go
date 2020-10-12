@@ -3,6 +3,7 @@ package local
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform/providers"
 	"log"
 	"sort"
 
@@ -34,6 +35,12 @@ func (b *Local) Context(op *backend.Operation) (*terraform.Context, statemgr.Ful
 	return ctx, stateMgr, diags
 }
 
+func (b *Local) UpdateProviderResolver(providerResolver providers.Resolver) {
+	if v := b.ContextOpts; v != nil {
+		v.ProviderResolver = providerResolver
+	}
+}
+
 func (b *Local) context(op *backend.Operation) (*terraform.Context, *configload.Snapshot, statemgr.Full, tfdiags.Diagnostics) {
 	var diags tfdiags.Diagnostics
 
@@ -49,10 +56,12 @@ func (b *Local) context(op *backend.Operation) (*terraform.Context, *configload.
 		diags = diags.Append(errwrap.Wrapf("Error locking state: {{err}}", err))
 		return nil, nil, nil, diags
 	}
-	log.Printf("[TRACE] backend/local: reading remote state for workspace %q", op.Workspace)
-	if err := s.RefreshState(); err != nil {
-		diags = diags.Append(errwrap.Wrapf("Error loading state: {{err}}", err))
-		return nil, nil, nil, diags
+	if op.PlanRefresh {
+		log.Printf("[TRACE] backend/local: reading remote state for workspace %q", op.Workspace)
+		if err := s.RefreshState(); err != nil {
+			diags = diags.Append(errwrap.Wrapf("Error loading state: {{err}}", err))
+			return nil, nil, nil, diags
+		}
 	}
 
 	// Initialize our context options
@@ -221,7 +230,7 @@ func (b *Local) contextFromPlanFile(pf *planfile.Reader, opts terraform.ContextO
 	// we do this here anyway to ensure consistent behavior.
 	opts.State = priorStateFile.State
 
-	plan, err := pf.ReadPlan()
+	plan, err := pf.ReadPlan(false)
 	if err != nil {
 		diags = diags.Append(tfdiags.Sourceless(
 			tfdiags.Error,
