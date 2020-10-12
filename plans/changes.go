@@ -1,6 +1,7 @@
 package plans
 
 import (
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/terraform/addrs"
 	"github.com/hashicorp/terraform/states"
 	"github.com/zclconf/go-cty/cty"
@@ -178,7 +179,7 @@ type ResourceInstanceChange struct {
 // Encode produces a variant of the reciever that has its change values
 // serialized so it can be written to a plan file. Pass the implied type of the
 // corresponding resource type schema for correct operation.
-func (rc *ResourceInstanceChange) Encode(ty cty.Type) (*ResourceInstanceChangeSrc, error) {
+func (rc *ResourceInstanceChange) Encode(ty cty.Type, config hcl.Body) (*ResourceInstanceChangeSrc, error) {
 	cs, err := rc.Change.Encode(ty)
 	if err != nil {
 		return nil, err
@@ -190,6 +191,7 @@ func (rc *ResourceInstanceChange) Encode(ty cty.Type) (*ResourceInstanceChangeSr
 		ChangeSrc:       *cs,
 		RequiredReplace: rc.RequiredReplace,
 		Private:         rc.Private,
+		Config:			 config,
 	}, err
 }
 

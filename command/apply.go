@@ -104,7 +104,7 @@ func (c *ApplyCommand) Run(args []string) int {
 			Config: backendConfig,
 		})
 	} else {
-		plan, err := planFile.ReadPlan()
+		plan, err := planFile.ReadPlan(true)
 		if err != nil {
 			diags = diags.Append(tfdiags.Sourceless(
 				tfdiags.Error,

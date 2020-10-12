@@ -253,14 +253,33 @@ NeedProvider:
 				cb(provider, warnings)
 			}
 		}
-		available.Sort()                           // put the versions in increasing order of precedence
-		for i := len(available) - 1; i >= 0; i-- { // walk backwards to consider newer versions first
-			if acceptableVersions.Has(available[i]) {
-				need[provider] = available[i]
-				if cb := evts.QueryPackagesSuccess; cb != nil {
-					cb(provider, available[i])
+		available.Sort()
+		cacheDir:= i.globalCacheDir
+		if cacheDir!= nil {
+			cachedPackages, ok := cacheDir.AllAvailablePackages()[provider]
+			// put the versions in increasing order of precedence
+			if ok {
+				for index := len(cachedPackages) - 1; index >= 0; index-- {
+					cachedPackage := cachedPackages[index]
+					if acceptableVersions.Has(cachedPackage.Version) {
+						need[provider] = cachedPackage.Version
+						if cb := evts.QueryPackagesSuccess; cb != nil {
+							cb(provider, available[index])
+						}
+						continue NeedProvider
+					}
 				}
-				continue NeedProvider
+			}
+		}
+		if _, ok := need[provider]; !ok {
+			for index := len(available) - 1; index >= 0; index-- { // walk backwards to consider newer versions first
+				if acceptableVersions.Has(available[index]) {
+					need[provider] = available[index]
+					if cb := evts.QueryPackagesSuccess; cb != nil {
+						cb(provider, available[index])
+					}
+					continue NeedProvider
+				}
 			}
 		}
 		// If we get here then the source has no packages that meet the given

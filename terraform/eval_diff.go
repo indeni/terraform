@@ -214,19 +214,19 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 		}
 	}
 
-	log.Printf("[TRACE] Re-validating config for %q", n.Addr.Absolute(ctx.Path()))
-	// Allow the provider to validate the final set of values.
-	// The config was statically validated early on, but there may have been
-	// unknown values which the provider could not validate at the time.
-	validateResp := provider.ValidateResourceTypeConfig(
-		providers.ValidateResourceTypeConfigRequest{
-			TypeName: n.Addr.Resource.Type,
-			Config:   configVal,
-		},
-	)
-	if validateResp.Diagnostics.HasErrors() {
-		return nil, validateResp.Diagnostics.InConfigBody(config.Config).Err()
-	}
+	//log.Printf("[TRACE] Re-validating config for %q", n.Addr.Absolute(ctx.Path()))
+	//// Allow the provider to validate the final set of values.
+	//// The config was statically validated early on, but there may have been
+	//// unknown values which the provider could not validate at the time.
+	//validateResp := provider.ValidateResourceTypeConfig(
+	//	providers.ValidateResourceTypeConfigRequest{
+	//		TypeName: n.Addr.Resource.Type,
+	//		Config:   configVal,
+	//	},
+	//)
+	//if validateResp.Diagnostics.HasErrors() {
+	//	return nil, validateResp.Diagnostics.InConfigBody(config.Config).Err()
+	//}
 
 	// The provider gets an opportunity to customize the proposed new value,
 	// which in turn produces the _planned_ new value. But before
@@ -802,6 +802,7 @@ type EvalWriteDiff struct {
 	DeposedKey     states.DeposedKey
 	ProviderSchema **ProviderSchema
 	Change         **plans.ResourceInstanceChange
+	Config		   hcl.Body
 }
 
 // TODO: test
@@ -833,7 +834,7 @@ func (n *EvalWriteDiff) Eval(ctx EvalContext) (interface{}, error) {
 		return nil, fmt.Errorf("provider does not support resource type %q", n.Addr.Resource.Type)
 	}
 
-	csrc, err := change.Encode(schema.ImpliedType())
+	csrc, err := change.Encode(schema.ImpliedType(), n.Config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode planned changes for %s: %s", addr, err)
 	}
