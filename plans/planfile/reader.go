@@ -67,7 +67,7 @@ func Open(filename string) (*Reader, error) {
 // Errors can be returned for various reasons, including if the plan file
 // is not of an appropriate format version, if it was created by a different
 // version of Terraform, if it is invalid, etc.
-func (r *Reader) ReadPlan() (*plans.Plan, error) {
+func (r *Reader) ReadPlan(parseResourcesFromPlanFile bool) (*plans.Plan, error) {
 	var planFile *zip.File
 	for _, file := range r.zip.File {
 		if file.Name == tfplanFilename {
@@ -87,7 +87,7 @@ func (r *Reader) ReadPlan() (*plans.Plan, error) {
 	}
 	defer pr.Close()
 
-	return readTfplan(pr)
+	return readTfplan(pr, parseResourcesFromPlanFile)
 }
 
 // ReadStateFile reads the state file embedded in the plan file.

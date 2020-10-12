@@ -103,7 +103,7 @@ type Context struct {
 	variables    InputValues
 	meta         *ContextMeta
 	destroy      bool
-
+	generateIdFromAddress bool
 	hooks      []Hook
 	components contextComponentFactory
 	schemas    *Schemas
@@ -120,6 +120,22 @@ type Context struct {
 	runContextCancel    context.CancelFunc
 	shadowErr           error
 }
+//
+//func (c *Context) Deadline() (deadline time.Time, ok bool) {
+//	panic("implement me")
+//}
+//
+//func (c *Context) Done() <-chan struct{} {
+//	panic("implement me")
+//}
+//
+//func (c *Context) Err() error {
+//	panic("implement me")
+//}
+//
+//func (c *Context) Value(key interface{}) interface{} {
+//	panic("implement me")
+//}
 
 // (additional methods on Context can be found in context_*.go files.)
 
@@ -249,6 +265,10 @@ func NewContext(opts *ContextOpts) (*Context, tfdiags.Diagnostics) {
 
 func (c *Context) Schemas() *Schemas {
 	return c.schemas
+}
+
+func (c *Context) EnableGenerateIdFromAddress()  {
+	c.generateIdFromAddress = true
 }
 
 type ContextGraphOpts struct {

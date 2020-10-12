@@ -79,6 +79,7 @@ func (w *ContextGraphWalker) EvalContext() EvalContext {
 		Schemas:            w.Context.schemas,
 		VariableValues:     w.variableValues,
 		VariableValuesLock: &w.variableValuesLock,
+		GenerateIdFromAddress: w.Context.generateIdFromAddress,
 	}
 
 	ctx := &BuiltinEvalContext{

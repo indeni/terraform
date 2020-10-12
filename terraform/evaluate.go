@@ -5,6 +5,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/agext/levenshtein"
@@ -60,6 +63,8 @@ type Evaluator struct {
 	// Changes is the set of proposed changes, embedded in a wrapper that
 	// ensures they can be safely accessed and modified concurrently.
 	Changes *plans.ChangesSync
+
+	GenerateIdFromAddress bool
 }
 
 // Scope creates an evaluation scope for the given module path and optional
@@ -629,6 +634,37 @@ func (d *evaluationStateData) GetPathAttr(addr addrs.PathAttr, rng tfdiags.Sourc
 	}
 }
 
+func (d *evaluationStateData) populateUnknownValues(val cty.Value, addr addrs.Resource, modulePath addrs.ModuleInstance, index string) cty.Value {
+	if !d.Evaluator.GenerateIdFromAddress {
+		return val
+	}
+	index = strings.ReplaceAll(index, "[", "")
+	index = strings.ReplaceAll(index, "]", "")
+	index = strings.ReplaceAll(index, "\"", "")
+	var valAsMap = val.AsValueMap()
+	var changed = false
+	var idByAddress = addr.String()
+	if modulePath.String() != "" {
+		idByAddress = modulePath.String() + "." + idByAddress
+	}
+	if index != "" {
+		idByAddress = idByAddress + "[" + index + "]"
+	}
+	exlcudeNames, _:=   regexp.Compile("cidr")
+
+	for key := range valAsMap {
+		if !valAsMap[key].IsKnown()  && valAsMap[key].Type() == cty.String && !exlcudeNames.MatchString(key){
+			changed = true
+			valAsMap[key] = cty.StringVal(idByAddress + "." +key)
+		}
+	}
+	if changed {
+		return cty.ObjectVal(valAsMap)
+	} else {
+		return val
+	}
+}
+
 func (d *evaluationStateData) GetResource(addr addrs.Resource, rng tfdiags.SourceRange) (cty.Value, tfdiags.Diagnostics) {
 	var diags tfdiags.Diagnostics
 	// First we'll consult the configuration to see if an resource of this
@@ -653,7 +689,6 @@ func (d *evaluationStateData) GetResource(addr addrs.Resource, rng tfdiags.Sourc
 	}
 
 	rs := d.Evaluator.State.Resource(addr.Absolute(d.ModulePath))
-
 	if rs == nil {
 		switch d.Operation {
 		case walkPlan, walkApply:
@@ -751,7 +786,13 @@ func (d *evaluationStateData) GetResource(addr addrs.Resource, rng tfdiags.Sourc
 				})
 				continue
 			}
-
+			var index string
+			if key !=nil  {
+				index = key.String()
+			} else {
+				index = ""
+			}
+			val = d.populateUnknownValues(val, addr, d.ModulePath, index)
 			instances[key] = val
 			continue
 		}
@@ -768,7 +809,14 @@ func (d *evaluationStateData) GetResource(addr addrs.Resource, rng tfdiags.Sourc
 			})
 			continue
 		}
-		instances[key] = ios.Value
+		var index string
+		if key !=nil  {
+			index = key.String()
+		} else {
+			index = ""
+		}
+		val := d.populateUnknownValues(ios.Value, addr, d.ModulePath, index)
+		instances[key] = val
 	}
 
 	var ret cty.Value
@@ -795,8 +843,7 @@ func (d *evaluationStateData) GetResource(addr addrs.Resource, rng tfdiags.Sourc
 					// old key from state, which isn't valid for evaluation
 					continue
 				}
-
-				vals[int(intKey)] = instance
+				vals[int(intKey)] = d.populateUnknownValues(instance, addr, d.ModulePath, strconv.Itoa(int(intKey)))
 			}
 
 			// Insert unknown values where there are any missing instances
@@ -818,7 +865,7 @@ func (d *evaluationStateData) GetResource(addr addrs.Resource, rng tfdiags.Sourc
 				// old key that is being dropped and not used for evaluation
 				continue
 			}
-			vals[string(strKey)] = instance
+			vals[string(strKey)] = d.populateUnknownValues(instance, addr, d.ModulePath, string(strKey))
 		}
 
 		if len(vals) > 0 {
