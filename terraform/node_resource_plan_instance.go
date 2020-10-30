@@ -118,7 +118,6 @@ func (n *NodePlannableResourceInstance) dataResourceExecute(ctx EvalContext) err
 		Addr:           addr.Resource,
 		ProviderSchema: &providerSchema,
 		Change:         &change,
-		Config: config.Config,
 	}
 	_, err = writeDiff.Eval(ctx)
 	return err
@@ -230,7 +229,6 @@ func (n *NodePlannableResourceInstance) managedResourceExecute(ctx EvalContext, 
 		Addr:           addr.Resource,
 		ProviderSchema: &providerSchema,
 		Change:         &change,
-		Config: config.Config,
 	}
 	_, err = writeDiff.Eval(ctx)
 	return err
