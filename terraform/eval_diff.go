@@ -802,7 +802,6 @@ type EvalWriteDiff struct {
 	DeposedKey     states.DeposedKey
 	ProviderSchema **ProviderSchema
 	Change         **plans.ResourceInstanceChange
-	Config		   hcl.Body
 }
 
 // TODO: test
@@ -834,7 +833,7 @@ func (n *EvalWriteDiff) Eval(ctx EvalContext) (interface{}, error) {
 		return nil, fmt.Errorf("provider does not support resource type %q", n.Addr.Resource.Type)
 	}
 
-	csrc, err := change.Encode(schema.ImpliedType(), n.Config)
+	csrc, err := change.Encode(schema.ImpliedType())
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode planned changes for %s: %s", addr, err)
 	}

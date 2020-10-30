@@ -2,7 +2,6 @@ package plans
 
 import (
 	"fmt"
-	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/terraform/addrs"
 	"github.com/hashicorp/terraform/states"
 	"github.com/zclconf/go-cty/cty"
@@ -13,7 +12,6 @@ import (
 // obtain a ResourceInstanceChange.
 type ResourceInstanceChangeSrc struct {
 
-	Config hcl.Body
 	// Addr is the absolute address of the resource instance that the change
 	// will apply to.
 	Addr addrs.AbsResourceInstance
