@@ -64,8 +64,13 @@ func (c *ShowCommand) Run(args []string) int {
 
 	var diags tfdiags.Diagnostics
 
+	var backendOpts BackendOpts
+	if generateIdFromAddress {
+		backendOpts = BackendOpts{ForceLocal: true}
+	}
+
 	// Load the backend
-	b, backendDiags := c.Backend(nil)
+	b, backendDiags := c.Backend(&backendOpts)
 	diags = diags.Append(backendDiags)
 	if backendDiags.HasErrors() {
 		c.showDiagnostics(diags)
