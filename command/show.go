@@ -63,6 +63,7 @@ func (c *ShowCommand) Run(args []string) int {
 	}
 
 	var diags tfdiags.Diagnostics
+	var planDiags tfdiags.Diagnostics
 
 	var backendOpts BackendOpts
 	if generateIdFromAddress {
@@ -171,7 +172,11 @@ func (c *ShowCommand) Run(args []string) int {
 				return 1
 			}
 			ctx.EnableGenerateIdFromAddress()
-			plan, _ = ctx.Plan()
+			plan, planDiags = ctx.Plan()
+			if planDiags.HasErrors() {
+				c.showDiagnostics(planDiags)
+				return 1
+			}
 		}
 		if planErr != nil {
 			stateFile, stateErr = getStateFromPath(path)
