@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform/states"
 
 	"github.com/hashicorp/terraform/addrs"
-	"github.com/zclconf/go-cty/cty"
 )
 
 // NodePlannableResourceInstance represents a _single_ resource
@@ -51,7 +50,6 @@ func (n *NodePlannableResourceInstance) evalTreeDataResource(addr addrs.AbsResou
 	var providerSchema *ProviderSchema
 	var change *plans.ResourceInstanceChange
 	var state *states.ResourceInstanceObject
-	var configVal cty.Value
 
 	return &EvalSequence{
 		Nodes: []EvalNode{
@@ -111,17 +109,17 @@ func (n *NodePlannableResourceInstance) evalTreeDataResource(addr addrs.AbsResou
 				ProviderSchema: &providerSchema,
 			},
 
-			&EvalReadData{
-				Addr:           addr.Resource,
-				Config:         n.Config,
-				Provider:       &provider,
-				ProviderAddr:   n.ResolvedProvider,
-				ProviderSchema: &providerSchema,
-				ForcePlanRead:  true, // _always_ produce a Read change, even if the config seems ready
-				OutputChange:   &change,
-				OutputValue:    &configVal,
-				OutputState:    &state,
-			},
+			//&EvalReadData{
+			//	Addr:           addr.Resource,
+			//	Config:         n.Config,
+			//	Provider:       &provider,
+			//	ProviderAddr:   n.ResolvedProvider,
+			//	ProviderSchema: &providerSchema,
+			//	ForcePlanRead:  true, // _always_ produce a Read change, even if the config seems ready
+			//	OutputChange:   &change,
+			//	OutputValue:    &configVal,
+			//	OutputState:    &state,
+			//},
 
 			&EvalWriteState{
 				Addr:           addr.Resource,
