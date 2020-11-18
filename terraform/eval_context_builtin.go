@@ -72,6 +72,7 @@ type BuiltinEvalContext struct {
 	ChangesValue          *plans.ChangesSync
 	StateValue            *states.SyncState
 	InstanceExpanderValue *instances.Expander
+	SkipReadDataSourceValue bool
 }
 
 // BuiltinEvalContext implements EvalContext
@@ -116,6 +117,12 @@ func (ctx *BuiltinEvalContext) Hook(fn func(Hook) (HookAction, error)) error {
 func (ctx *BuiltinEvalContext) Input() UIInput {
 	return ctx.InputValue
 }
+
+
+func (ctx *BuiltinEvalContext) SkipReadDataSource() bool {
+	return ctx.SkipReadDataSourceValue
+}
+
 
 func (ctx *BuiltinEvalContext) InitProvider(addr addrs.AbsProviderConfig) (providers.Interface, error) {
 	// If we already initialized, it is an error
