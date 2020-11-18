@@ -71,23 +71,23 @@ func (n *NodePlannableResourceInstance) dataResourceExecute(ctx EvalContext) err
 		return err
 	}
 
-	//readDataPlan := &evalReadDataPlan{
-	//	evalReadData: evalReadData{
-	//		Addr:           addr.Resource,
-	//		Config:         n.Config,
-	//		Provider:       &provider,
-	//		ProviderAddr:   n.ResolvedProvider,
-	//		ProviderMetas:  n.ProviderMetas,
-	//		ProviderSchema: &providerSchema,
-	//		OutputChange:   &change,
-	//		State:          &state,
-	//		dependsOn:      n.dependsOn,
-	//	},
-	//}
-	//_, err = readDataPlan.Eval(ctx)
-	//if err != nil {
-	//	return err
-	//}
+	readDataPlan := &evalReadDataPlan{
+		evalReadData: evalReadData{
+			Addr:           addr.Resource,
+			Config:         n.Config,
+			Provider:       &provider,
+			ProviderAddr:   n.ResolvedProvider,
+			ProviderMetas:  n.ProviderMetas,
+			ProviderSchema: &providerSchema,
+			OutputChange:   &change,
+			State:          &state,
+			dependsOn:      n.dependsOn,
+		},
+	}
+	_, err = readDataPlan.Eval(ctx)
+	if err != nil {
+		return err
+	}
 
 	// write the data source into both the refresh state and the
 	// working state

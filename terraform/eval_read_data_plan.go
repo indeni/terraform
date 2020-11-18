@@ -60,7 +60,7 @@ func (n *evalReadDataPlan) Eval(ctx EvalContext) (interface{}, error) {
 	// unknown values then we must defer the read to the apply phase by
 	// producing a "Read" change for this resource, and a placeholder value for
 	// it in the state.
-	if n.forcePlanRead(ctx) || !configKnown {
+	if n.forcePlanRead(ctx) || !configKnown || ctx.SkipReadDataSource() {
 		if configKnown {
 			log.Printf("[TRACE] evalReadDataPlan: %s configuration is fully known, but we're forcing a read plan to be created", absAddr)
 		} else {

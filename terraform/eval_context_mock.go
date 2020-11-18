@@ -157,6 +157,10 @@ func (c *MockEvalContext) Input() UIInput {
 	return c.InputInput
 }
 
+func (c *MockEvalContext) SkipReadDataSource() bool {
+	return false
+}
+
 func (c *MockEvalContext) InitProvider(addr addrs.AbsProviderConfig) (providers.Interface, error) {
 	c.InitProviderCalled = true
 	c.InitProviderType = addr.String()

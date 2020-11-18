@@ -100,6 +100,7 @@ func (w *ContextGraphWalker) EvalContext() EvalContext {
 		Evaluator:             evaluator,
 		VariableValues:        w.variableValues,
 		VariableValuesLock:    &w.variableValuesLock,
+		SkipReadDataSourceValue: w.Context.generateIdFromAddress,
 	}
 
 	return ctx
