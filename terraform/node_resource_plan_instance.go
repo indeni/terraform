@@ -51,7 +51,7 @@ func (n *NodePlannableResourceInstance) dataResourceExecute(ctx EvalContext) err
 	var change *plans.ResourceInstanceChange
 	var state *states.ResourceInstanceObject
 
-	_, providerSchema, err := GetProvider(ctx, n.ResolvedProvider)
+	provider, providerSchema, err := GetProvider(ctx, n.ResolvedProvider)
 	if err != nil {
 		return err
 	}
