@@ -51,7 +51,7 @@ func ProviderEvalTree(n *NodeApplyableProvider, config *configs.Provider) EvalNo
 	// not have access to all the variables.
 	var Ops []walkOperation
 	if n.GetSkip() {
-		Ops = []walkOperation{walkRefresh, walkPlan, walkApply, walkDestroy}
+		Ops = []walkOperation{walkRefresh, walkApply, walkDestroy}
 	} else {
 		Ops = []walkOperation{walkRefresh, walkPlan, walkApply, walkDestroy}
 	}
