@@ -119,11 +119,6 @@ func (ctx *BuiltinEvalContext) Input() UIInput {
 }
 
 
-func (ctx *BuiltinEvalContext) SkipReadDataSource() bool {
-	return ctx.SkipReadDataSourceValue
-}
-
-
 func (ctx *BuiltinEvalContext) InitProvider(addr addrs.AbsProviderConfig) (providers.Interface, error) {
 	// If we already initialized, it is an error
 	if p := ctx.Provider(addr); p != nil {
@@ -260,6 +255,10 @@ func (ctx *BuiltinEvalContext) Provisioner(n string) provisioners.Interface {
 	defer ctx.ProvisionerLock.Unlock()
 
 	return ctx.ProvisionerCache[n]
+}
+
+func (ctx *BuiltinEvalContext) SkipReadDataSource() bool {
+	return ctx.SkipReadDataSourceValue
 }
 
 func (ctx *BuiltinEvalContext) ProvisionerSchema(n string) *configschema.Block {

@@ -60,6 +60,9 @@ func (g *Graph) walk(walker GraphWalker) tfdiags.Diagnostics {
 
 		// If the node is eval-able, then evaluate it.
 		if ev, ok := v.(GraphNodeEvalable); ok {
+			if ev2, ok := v.(*NodeApplyableProvider); ok {
+				ev2.SetSkip(ctx.SkipReadDataSource())
+			}
 			tree := ev.EvalTree()
 			if tree == nil {
 				panic(fmt.Sprintf("%q (%T): nil eval tree", dag.VertexName(v), v))

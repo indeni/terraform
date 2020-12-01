@@ -49,8 +49,14 @@ func ProviderEvalTree(n *NodeApplyableProvider, config *configs.Provider) EvalNo
 
 	// We configure on everything but validate, since validate may
 	// not have access to all the variables.
+	var Ops []walkOperation
+	if n.GetSkip() {
+		Ops = []walkOperation{walkRefresh, walkPlan, walkApply, walkDestroy}
+	} else {
+		Ops = []walkOperation{walkRefresh, walkPlan, walkApply, walkDestroy}
+	}
 	seq = append(seq, &EvalOpFilter{
-		Ops: []walkOperation{walkRefresh, walkPlan, walkApply, walkDestroy},
+		Ops: Ops,
 		Node: &EvalSequence{
 			Nodes: []EvalNode{
 				&EvalConfigProvider{
