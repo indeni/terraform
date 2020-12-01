@@ -418,7 +418,10 @@ func (p *GRPCProvider) PlanResourceChange(r providers.PlanResourceChangeRequest)
 
 	protoResp, err := p.client.PlanResourceChange(p.ctx, protoReq)
 	if err != nil {
-		resp.Diagnostics = resp.Diagnostics.Append(err)
+		//resp.Diagnostics = resp.Diagnostics.Append(err)
+		state := cty.NullVal(resSchema.Block.ImpliedType())
+		state, _ = msgpack.Unmarshal(protoReq.ProposedNewState.Msgpack, resSchema.Block.ImpliedType())
+		resp.PlannedState = state
 		return resp
 	}
 	resp.Diagnostics = resp.Diagnostics.Append(convert.ProtoToDiagnostics(protoResp.Diagnostics))
