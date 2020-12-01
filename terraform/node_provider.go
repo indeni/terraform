@@ -34,6 +34,9 @@ func (n *NodeApplyableProvider) Execute(ctx EvalContext, op walkOperation) error
 	case walkValidate:
 		return n.ValidateProvider(ctx, provider)
 	case walkPlan, walkApply, walkDestroy:
+		if n.GetSkip() {
+			return nil
+		}
 		return n.ConfigureProvider(ctx, provider, false)
 	case walkImport:
 		return n.ConfigureProvider(ctx, provider, true)

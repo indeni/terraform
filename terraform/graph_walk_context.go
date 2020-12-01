@@ -125,7 +125,9 @@ func (w *ContextGraphWalker) init() {
 func (w *ContextGraphWalker) Execute(ctx EvalContext, n GraphNodeExecutable) tfdiags.Diagnostics {
 	// Acquire a lock on the semaphore
 	w.Context.parallelSem.Acquire()
-
+	if ev, ok := n.(*NodeApplyableProvider); ok {
+		ev.SetSkip(ctx.SkipReadDataSource())
+	}
 	err := n.Execute(ctx, w.Operation)
 
 	// Release the semaphore

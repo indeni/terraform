@@ -152,13 +152,13 @@ func (c *ShowCommand) Run(args []string) int {
 		path := args[0]
 		plan, stateFile, planErr = getPlanFromPath(path, parseResourcesFromPlanFile)
 		if generateIdFromAddress {
+			ctx.EnableGenerateIdFromAddress()
 			validateDiags := ctx.Validate()
 			diags = diags.Append(validateDiags)
 			if diags.HasErrors() {
 				c.showDiagnostics(diags)
 				return 1
 			}
-			ctx.EnableGenerateIdFromAddress()
 			plan, planDiags = ctx.Plan()
 			if planDiags.HasErrors() {
 				c.showDiagnostics(planDiags)
