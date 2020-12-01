@@ -92,6 +92,7 @@ func (w *ContextGraphWalker) EnterPath(path addrs.ModuleInstance) EvalContext {
 		Evaluator:           evaluator,
 		VariableValues:      w.variableValues,
 		VariableValuesLock:  &w.variableValuesLock,
+		SkipReadDataSourceValue: w.Context.generateIdFromAddress,
 	}
 
 	w.contexts[key] = ctx

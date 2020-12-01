@@ -65,6 +65,8 @@ type BuiltinEvalContext struct {
 	StateValue          *states.SyncState
 
 	once sync.Once
+
+	SkipReadDataSourceValue bool
 }
 
 // BuiltinEvalContext implements EvalContext
@@ -242,6 +244,10 @@ func (ctx *BuiltinEvalContext) Provisioner(n string) provisioners.Interface {
 	defer ctx.ProvisionerLock.Unlock()
 
 	return ctx.ProvisionerCache[n]
+}
+
+func (ctx *BuiltinEvalContext) SkipReadDataSource() bool {
+	return ctx.SkipReadDataSourceValue
 }
 
 func (ctx *BuiltinEvalContext) ProvisionerSchema(n string) *configschema.Block {
