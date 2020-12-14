@@ -67,6 +67,7 @@ type BuiltinEvalContext struct {
 	once sync.Once
 
 	SkipReadDataSourceValue bool
+	OldChanges  *plans.Changes
 }
 
 // BuiltinEvalContext implements EvalContext
@@ -80,6 +81,11 @@ func (ctx *BuiltinEvalContext) Stopped() <-chan struct{} {
 
 	return ctx.StopContext.Done()
 }
+
+func (ctx *BuiltinEvalContext) GetOldChanges() *plans.Changes {
+	return ctx.OldChanges
+}
+
 
 func (ctx *BuiltinEvalContext) Hook(fn func(Hook) (HookAction, error)) error {
 	for _, h := range ctx.Hooks {

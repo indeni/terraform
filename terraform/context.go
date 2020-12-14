@@ -81,6 +81,7 @@ type ContextMeta struct {
 type Context struct {
 	config    *configs.Config
 	changes   *plans.Changes
+	oldChanges   *plans.Changes
 	state     *states.State
 	targets   []addrs.Targetable
 	variables InputValues
@@ -103,6 +104,11 @@ type Context struct {
 	runContextCancel    context.CancelFunc
 	shadowErr           error
 }
+
+func (c *Context) UpdateChanges(changes *plans.Changes)  {
+	c.oldChanges = changes
+}
+
 
 // (additional methods on Context can be found in context_*.go files.)
 

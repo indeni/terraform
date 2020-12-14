@@ -31,6 +31,8 @@ type EvalContext interface {
 
 	SkipReadDataSource() bool
 
+	GetOldChanges() *plans.Changes
+
 	// InitProvider initializes the provider with the given type and address, and
 	// returns the implementation of the resource provider or an error.
 	//

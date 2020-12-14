@@ -167,6 +167,10 @@ func (c *MockEvalContext) Provider(addr addrs.AbsProviderConfig) providers.Inter
 	return c.ProviderProvider
 }
 
+func (c *MockEvalContext) GetOldChanges() *plans.Changes {
+	panic("implement me")
+}
+
 func (c *MockEvalContext) ProviderSchema(addr addrs.AbsProviderConfig) *ProviderSchema {
 	c.ProviderSchemaCalled = true
 	c.ProviderSchemaAddr = addr

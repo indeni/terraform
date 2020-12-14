@@ -62,6 +62,7 @@ type Evaluator struct {
 	Changes *plans.ChangesSync
 
 	GenerateIdFromAddress bool
+	OldChanges  *plans.Changes
 }
 
 // Scope creates an evaluation scope for the given module path and optional
