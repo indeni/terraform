@@ -73,6 +73,7 @@ type BuiltinEvalContext struct {
 	StateValue            *states.SyncState
 	InstanceExpanderValue *instances.Expander
 	SkipReadDataSourceValue bool
+	OldChanges  *plans.Changes
 }
 
 // BuiltinEvalContext implements EvalContext
@@ -259,6 +260,10 @@ func (ctx *BuiltinEvalContext) Provisioner(n string) provisioners.Interface {
 
 func (ctx *BuiltinEvalContext) SkipReadDataSource() bool {
 	return ctx.SkipReadDataSourceValue
+}
+
+func (ctx *BuiltinEvalContext) GetOldChanges() *plans.Changes {
+	return ctx.OldChanges
 }
 
 func (ctx *BuiltinEvalContext) ProvisionerSchema(n string) *configschema.Block {

@@ -130,6 +130,10 @@ type MockEvalContext struct {
 	InstanceExpanderExpander *instances.Expander
 }
 
+func (c *MockEvalContext) GetOldChanges() *plans.Changes {
+	panic("implement me")
+}
+
 // MockEvalContext implements EvalContext
 var _ EvalContext = (*MockEvalContext)(nil)
 

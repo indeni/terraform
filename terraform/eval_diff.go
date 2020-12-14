@@ -155,6 +155,21 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	keyData := EvalDataForInstanceKey(n.Addr.Key, forEach)
 	configVal, _, configDiags := ctx.EvaluateBlock(config.Config, schema, nil, keyData)
 	diags = diags.Append(configDiags)
+	var oldResource *plans.ResourceInstanceChange
+	absolutePath := n.Addr.Absolute(ctx.Path()).String()
+	if ctx.SkipReadDataSource() {
+		for _, s := range ctx.GetOldChanges().Resources {
+			if s.Addr.String() == absolutePath {
+				schema, _ := providerSchema.SchemaForResourceType(n.Addr.Resource.Mode, n.Addr.Resource.Type)
+				changeV, _ := s.Decode(schema.ImpliedType())
+				oldResource = changeV
+				break
+			}
+		}
+		if oldResource == nil {
+			log.Printf("no old data was found for " + n.Addr.String())
+		}
+	}
 	if configDiags.HasErrors() {
 		return nil, diags.Err()
 	}
@@ -247,6 +262,16 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 		PriorPrivate:     priorPrivate,
 		ProviderMeta:     metaConfigVal,
 	})
+	if oldResource != nil && !oldResource.After.IsNull() && oldResource.After.IsKnown() {
+		var valAsMap = resp.PlannedState.AsValueMap()
+		var oldResourceAsMap = oldResource.After.AsValueMap()
+		for key := range valAsMap {
+			if valAsMap[key].IsNull() || !valAsMap[key].IsKnown() {
+				valAsMap[key] = oldResourceAsMap[key]
+			}
+		}
+		resp.PlannedState = cty.ObjectVal(valAsMap)
+	}
 	diags = diags.Append(resp.Diagnostics.InConfigBody(config.Config))
 	if diags.HasErrors() {
 		return nil, diags.Err()
@@ -271,7 +296,7 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 			tfdiags.Error,
 			"Provider produced invalid plan",
 			fmt.Sprintf(
-				"Provider %q planned an invalid value for %s.\n\nThis is a bug in the provider, which should be reported in the provider's own issue tracker.",
+				"1 Provider %q planned an invalid value for %s.\n\nThis is a bug in the provider, which should be reported in the provider's own issue tracker.",
 				n.ProviderAddr.Provider.String(), tfdiags.FormatErrorPrefixed(err, absAddr.String()),
 			),
 		))
@@ -279,37 +304,37 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	if diags.HasErrors() {
 		return nil, diags.Err()
 	}
-
-	if errs := objchange.AssertPlanValid(schema, priorVal, configVal, plannedNewVal); len(errs) > 0 {
-		if resp.LegacyTypeSystem {
-			// The shimming of the old type system in the legacy SDK is not precise
-			// enough to pass this consistency check, so we'll give it a pass here,
-			// but we will generate a warning about it so that we are more likely
-			// to notice in the logs if an inconsistency beyond the type system
-			// leads to a downstream provider failure.
-			var buf strings.Builder
-			fmt.Fprintf(&buf,
-				"[WARN] Provider %q produced an invalid plan for %s, but we are tolerating it because it is using the legacy plugin SDK.\n    The following problems may be the cause of any confusing errors from downstream operations:",
-				n.ProviderAddr.Provider.String(), absAddr,
-			)
-			for _, err := range errs {
-				fmt.Fprintf(&buf, "\n      - %s", tfdiags.FormatError(err))
-			}
-			log.Print(buf.String())
-		} else {
-			for _, err := range errs {
-				diags = diags.Append(tfdiags.Sourceless(
-					tfdiags.Error,
-					"Provider produced invalid plan",
-					fmt.Sprintf(
-						"Provider %q planned an invalid value for %s.\n\nThis is a bug in the provider, which should be reported in the provider's own issue tracker.",
-						n.ProviderAddr.Provider.String(), tfdiags.FormatErrorPrefixed(err, absAddr.String()),
-					),
-				))
-			}
-			return nil, diags.Err()
-		}
-	}
+	//
+	//if errs := objchange.AssertPlanValid(schema, priorVal, configVal, plannedNewVal); len(errs) > 0 {
+	//	if resp.LegacyTypeSystem {
+	//		// The shimming of the old type system in the legacy SDK is not precise
+	//		// enough to pass this consistency check, so we'll give it a pass here,
+	//		// but we will generate a warning about it so that we are more likely
+	//		// to notice in the logs if an inconsistency beyond the type system
+	//		// leads to a downstream provider failure.
+	//		var buf strings.Builder
+	//		fmt.Fprintf(&buf,
+	//			"[WARN] Provider %q produced an invalid plan for %s, but we are tolerating it because it is using the legacy plugin SDK.\n    The following problems may be the cause of any confusing errors from downstream operations:",
+	//			n.ProviderAddr.Provider.String(), absAddr,
+	//		)
+	//		for _, err := range errs {
+	//			fmt.Fprintf(&buf, "\n      - %s", tfdiags.FormatError(err))
+	//		}
+	//		log.Print(buf.String())
+	//	} else {
+	//		for _, err := range errs {
+	//			diags = diags.Append(tfdiags.Sourceless(
+	//				tfdiags.Error,
+	//				"Provider produced invalid plan",
+	//				fmt.Sprintf(
+	//					"Provider %q planned an invalid value for %s.\n\nThis is a bug in the provider, which should be reported in the provider's own issue tracker.",
+	//					n.ProviderAddr.Provider.String(), tfdiags.FormatErrorPrefixed(err, absAddr.String()),
+	//				),
+	//			))
+	//		}
+	//		return nil, diags.Err()
+	//	}
+	//}
 
 	// TODO: We should be able to remove this repeat of processing ignored changes
 	// after the plan, which helps providers relying on old behavior "just work"

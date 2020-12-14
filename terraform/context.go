@@ -82,6 +82,7 @@ type ContextMeta struct {
 type Context struct {
 	config    *configs.Config
 	changes   *plans.Changes
+	oldChanges   *plans.Changes
 	state     *states.State
 	targets   []addrs.Targetable
 	variables InputValues
@@ -251,6 +252,10 @@ func (c *Context) Schemas() *Schemas {
 
 func (c *Context) EnableGenerateIdFromAddress()  {
 	c.generateIdFromAddress = true
+}
+
+func (c *Context) UpdateChanges(changes *plans.Changes)  {
+	c.oldChanges = changes
 }
 
 type ContextGraphOpts struct {

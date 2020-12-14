@@ -61,7 +61,7 @@ func (n *evalReadDataPlan) Eval(ctx EvalContext) (interface{}, error) {
 	// unknown values then we must defer the read to the apply phase by
 	// producing a "Read" change for this resource, and a placeholder value for
 	// it in the state.
-	if n.forcePlanRead(ctx) || !configKnown || ctx.SkipReadDataSource() {
+	if n.forcePlanRead(ctx) || !configKnown || (ctx.SkipReadDataSource() && priorVal.IsNull()) {
 		if configKnown {
 			log.Printf("[TRACE] evalReadDataPlan: %s configuration is fully known, but we're forcing a read plan to be created", absAddr)
 		} else {
@@ -106,13 +106,11 @@ func (n *evalReadDataPlan) Eval(ctx EvalContext) (interface{}, error) {
 	// If we have a stored state we may not need to re-read the data source.
 	// Check the config against the state to see if there are any difference.
 	proposedVal, hasChanges := dataObjectHasChanges(schema, priorVal, configVal)
-
-	if !hasChanges {
+	if !hasChanges || ctx.SkipReadDataSource() && !priorVal.IsNull() {
 		log.Printf("[TRACE] evalReadDataPlan: %s no change detected, using existing state", absAddr)
 		// state looks up to date, and must have been read during refresh
 		return nil, diags.ErrWithWarnings()
 	}
-
 	log.Printf("[TRACE] evalReadDataPlan: %s configuration changed, planning data source", absAddr)
 
 	newVal, readDiags := n.readDataSource(ctx, configVal)

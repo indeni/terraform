@@ -31,6 +31,7 @@ type EvalContext interface {
 	Input() UIInput
 
 	SkipReadDataSource() bool
+	GetOldChanges() *plans.Changes
 
 	// InitProvider initializes the provider with the given address, and returns
 	// the implementation of the resource provider or an error.
