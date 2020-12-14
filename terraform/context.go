@@ -96,6 +96,7 @@ type ContextMeta struct {
 type Context struct {
 	config       *configs.Config
 	changes      *plans.Changes
+	oldChanges   *plans.Changes
 	state        *states.State
 	refreshState *states.State
 	skipRefresh  bool
@@ -262,6 +263,11 @@ func NewContext(opts *ContextOpts) (*Context, tfdiags.Diagnostics) {
 		sh:                  sh,
 	}, diags
 }
+
+func (c *Context) UpdateChanges(changes *plans.Changes)  {
+	c.oldChanges = changes
+}
+
 
 func (c *Context) Schemas() *Schemas {
 	return c.schemas

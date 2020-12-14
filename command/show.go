@@ -150,9 +150,10 @@ func (c *ShowCommand) Run(args []string) int {
 	// if that fails, try to read the cli argument as a path to a statefile
 	if len(args) > 0 {
 		path := args[0]
-		plan, stateFile, planErr = getPlanFromPath(path, parseResourcesFromPlanFile)
+		plan, stateFile, planErr = getPlanFromPath(path, true)
 		if generateIdFromAddress {
 			ctx.EnableGenerateIdFromAddress()
+			ctx.UpdateChanges(plan.Changes)
 			validateDiags := ctx.Validate()
 			diags = diags.Append(validateDiags)
 			if diags.HasErrors() {

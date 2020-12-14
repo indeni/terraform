@@ -80,6 +80,7 @@ func (w *ContextGraphWalker) EvalContext() EvalContext {
 		VariableValues:     w.variableValues,
 		VariableValuesLock: &w.variableValuesLock,
 		GenerateIdFromAddress: w.Context.generateIdFromAddress,
+		OldChanges: w.Context.oldChanges,
 	}
 
 	ctx := &BuiltinEvalContext{
@@ -101,6 +102,7 @@ func (w *ContextGraphWalker) EvalContext() EvalContext {
 		VariableValues:        w.variableValues,
 		VariableValuesLock:    &w.variableValuesLock,
 		SkipReadDataSourceValue: w.Context.generateIdFromAddress,
+		OldChanges: w.Context.oldChanges,
 	}
 
 	return ctx

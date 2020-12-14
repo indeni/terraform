@@ -161,6 +161,10 @@ func (c *MockEvalContext) SkipReadDataSource() bool {
 	return false
 }
 
+func (c *MockEvalContext) GetOldChanges() *plans.Changes {
+	panic("implement me")
+}
+
 func (c *MockEvalContext) InitProvider(addr addrs.AbsProviderConfig) (providers.Interface, error) {
 	c.InitProviderCalled = true
 	c.InitProviderType = addr.String()
