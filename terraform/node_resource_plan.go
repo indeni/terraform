@@ -246,7 +246,7 @@ func (n *NodePlannableResource) DynamicExpand(ctx EvalContext) (*Graph, error) {
 			// to force on CreateBeforeDestroy due to dependencies on other
 			// nodes that have it.
 			ForceCreateBeforeDestroy: n.CreateBeforeDestroy(),
-			skipRefresh:              n.skipRefresh,
+			skipRefresh:              ctx.SkipReadDataSource(),
 		}
 	}
 
