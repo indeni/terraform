@@ -261,7 +261,7 @@ NeedProvider:
 			cachedPackages, ok := cacheDir.AllAvailablePackages()[provider]
 			// put the versions in increasing order of precedence
 			if ok {
-				for index := len(cachedPackages) - 1; index >= 0; index-- {
+				for index := 0; index <= len(cachedPackages) -1 ; index++ {
 					cachedPackage := cachedPackages[index]
 					if acceptableVersions.Has(cachedPackage.Version) {
 						need[provider] = cachedPackage.Version
