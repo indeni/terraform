@@ -34,9 +34,11 @@ func (c *ShowCommand) Run(args []string) int {
 	var jsonOutput bool
 	var generateIdFromAddress bool
 	var pluginCacheDir string
+	var overrideDataDir string
 	cmdFlags.BoolVar(&jsonOutput, "json", false, "produce JSON output")
 	cmdFlags.BoolVar(&generateIdFromAddress, "generate-id-from-address", false, "generate unknown ids from address")
 	cmdFlags.StringVar(&pluginCacheDir, "plugin-cache-dir", "", "plugin cache dir")
+	cmdFlags.StringVar(&overrideDataDir, "override-data-dir", "", "override data dir")
 	cmdFlags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := cmdFlags.Parse(args); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error parsing command-line flags: %s\n", err.Error()))
@@ -128,6 +130,11 @@ func (c *ShowCommand) Run(args []string) int {
 	if pluginCacheDir != "" {
 		c.PluginCacheDir = pluginCacheDir
 	}
+
+	if overrideDataDir!= "" {
+		c.OverrideDataDir = overrideDataDir
+	}
+	
 	mode := providercache.InstallNewProvidersOnly
 	inst := c.providerInstaller()
 
