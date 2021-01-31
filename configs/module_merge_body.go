@@ -36,6 +36,8 @@ type mergeBody struct {
 	Override hcl.Body
 }
 
+type MergeBody = mergeBody
+
 var _ hcl.Body = mergeBody{}
 
 func (b mergeBody) Content(schema *hcl.BodySchema) (*hcl.BodyContent, hcl.Diagnostics) {
