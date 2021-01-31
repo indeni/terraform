@@ -255,6 +255,8 @@ func marshalRawData(config interface{}) ([]byte, error){
 		sourceRange := x.SrcRange
 		rawData := &RawData{FileName: sourceRange.Filename, StartLine: sourceRange.Start.Line, EndLine: sourceRange.End.Line}
 		return json.Marshal(rawData)
+	case configs.MergeBody:
+		return marshalRawData(x.Override)
 	}
 	return nil, nil
 }
