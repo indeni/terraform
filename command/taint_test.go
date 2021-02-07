@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/mitchellh/cli"
 
 	"github.com/hashicorp/terraform/addrs"
-	"github.com/hashicorp/terraform/helper/copy"
 	"github.com/hashicorp/terraform/states"
 )
 
@@ -358,6 +358,19 @@ func TestTaint_missingAllow(t *testing.T) {
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
+
+	// Check for the warning
+	actual := strings.TrimSpace(ui.ErrorWriter.String())
+	expected := strings.TrimSpace(`
+Warning: No such resource instance
+
+Resource instance test_instance.bar was not found, but this is not an error
+because -allow-missing was set.
+
+`)
+	if diff := cmp.Diff(expected, actual); diff != "" {
+		t.Fatalf("wrong output\n%s", diff)
+	}
 }
 
 func TestTaint_stateOut(t *testing.T) {
@@ -460,7 +473,7 @@ func TestTaint_module(t *testing.T) {
 func TestTaint_checkRequiredVersion(t *testing.T) {
 	// Create a temporary working directory that is empty
 	td := tempDir(t)
-	copy.CopyDir(testFixturePath("taint-check-required-version"), td)
+	testCopyDir(t, testFixturePath("taint-check-required-version"), td)
 	defer os.RemoveAll(td)
 	defer testChdir(t, td)()
 

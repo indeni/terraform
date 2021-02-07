@@ -12,9 +12,8 @@ import (
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/hashicorp/terraform/configs/configschema"
-	"github.com/hashicorp/terraform/helper/copy"
+	"github.com/hashicorp/terraform/internal/copy"
 	"github.com/hashicorp/terraform/providers"
-	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/terraform/tfdiags"
 )
 
@@ -33,7 +32,7 @@ func TestImport(t *testing.T) {
 	}
 
 	p.ImportResourceStateFn = nil
-	p.ImportResourceStateResponse = providers.ImportResourceStateResponse{
+	p.ImportResourceStateResponse = &providers.ImportResourceStateResponse{
 		ImportedResources: []providers.ImportedResource{
 			{
 				TypeName: "test_instance",
@@ -43,11 +42,13 @@ func TestImport(t *testing.T) {
 			},
 		},
 	}
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		ResourceTypes: map[string]*configschema.Block{
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		ResourceTypes: map[string]providers.Schema{
 			"test_instance": {
-				Attributes: map[string]*configschema.Attribute{
-					"id": {Type: cty.String, Optional: true, Computed: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"id": {Type: cty.String, Optional: true, Computed: true},
+					},
 				},
 			},
 		},
@@ -84,7 +85,7 @@ func TestImport_providerConfig(t *testing.T) {
 	}
 
 	p.ImportResourceStateFn = nil
-	p.ImportResourceStateResponse = providers.ImportResourceStateResponse{
+	p.ImportResourceStateResponse = &providers.ImportResourceStateResponse{
 		ImportedResources: []providers.ImportedResource{
 			{
 				TypeName: "test_instance",
@@ -94,23 +95,27 @@ func TestImport_providerConfig(t *testing.T) {
 			},
 		},
 	}
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		Provider: &configschema.Block{
-			Attributes: map[string]*configschema.Attribute{
-				"foo": {Type: cty.String, Optional: true},
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		Provider: providers.Schema{
+			Block: &configschema.Block{
+				Attributes: map[string]*configschema.Attribute{
+					"foo": {Type: cty.String, Optional: true},
+				},
 			},
 		},
-		ResourceTypes: map[string]*configschema.Block{
+		ResourceTypes: map[string]providers.Schema{
 			"test_instance": {
-				Attributes: map[string]*configschema.Attribute{
-					"id": {Type: cty.String, Optional: true, Computed: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"id": {Type: cty.String, Optional: true, Computed: true},
+					},
 				},
 			},
 		},
 	}
 
 	configured := false
-	p.ConfigureNewFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
+	p.ConfigureFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
 		configured = true
 
 		cfg := req.Config
@@ -152,7 +157,7 @@ func TestImport_providerConfig(t *testing.T) {
 // "remote" state provided by the "local" backend
 func TestImport_remoteState(t *testing.T) {
 	td := tempDir(t)
-	copy.CopyDir(testFixturePath("import-provider-remote-state"), td)
+	testCopyDir(t, testFixturePath("import-provider-remote-state"), td)
 	defer os.RemoveAll(td)
 	defer testChdir(t, td)()
 
@@ -191,7 +196,7 @@ func TestImport_remoteState(t *testing.T) {
 	}
 
 	p.ImportResourceStateFn = nil
-	p.ImportResourceStateResponse = providers.ImportResourceStateResponse{
+	p.ImportResourceStateResponse = &providers.ImportResourceStateResponse{
 		ImportedResources: []providers.ImportedResource{
 			{
 				TypeName: "test_instance",
@@ -201,23 +206,27 @@ func TestImport_remoteState(t *testing.T) {
 			},
 		},
 	}
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		Provider: &configschema.Block{
-			Attributes: map[string]*configschema.Attribute{
-				"foo": {Type: cty.String, Optional: true},
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		Provider: providers.Schema{
+			Block: &configschema.Block{
+				Attributes: map[string]*configschema.Attribute{
+					"foo": {Type: cty.String, Optional: true},
+				},
 			},
 		},
-		ResourceTypes: map[string]*configschema.Block{
+		ResourceTypes: map[string]providers.Schema{
 			"test_instance": {
-				Attributes: map[string]*configschema.Attribute{
-					"id": {Type: cty.String, Optional: true, Computed: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"id": {Type: cty.String, Optional: true, Computed: true},
+					},
 				},
 			},
 		},
 	}
 
 	configured := false
-	p.ConfigureNewFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
+	p.ConfigureFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
 		var diags tfdiags.Diagnostics
 		configured = true
 		if got, want := req.Config.GetAttr("foo"), cty.StringVal("bar"); !want.RawEquals(got) {
@@ -258,7 +267,7 @@ func TestImport_remoteState(t *testing.T) {
 // early failure on import should not leave stale lock
 func TestImport_initializationErrorShouldUnlock(t *testing.T) {
 	td := tempDir(t)
-	copy.CopyDir(testFixturePath("import-provider-remote-state"), td)
+	testCopyDir(t, testFixturePath("import-provider-remote-state"), td)
 	defer os.RemoveAll(td)
 	defer testChdir(t, td)()
 
@@ -338,7 +347,7 @@ func TestImport_providerConfigWithVar(t *testing.T) {
 	}
 
 	p.ImportResourceStateFn = nil
-	p.ImportResourceStateResponse = providers.ImportResourceStateResponse{
+	p.ImportResourceStateResponse = &providers.ImportResourceStateResponse{
 		ImportedResources: []providers.ImportedResource{
 			{
 				TypeName: "test_instance",
@@ -348,23 +357,27 @@ func TestImport_providerConfigWithVar(t *testing.T) {
 			},
 		},
 	}
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		Provider: &configschema.Block{
-			Attributes: map[string]*configschema.Attribute{
-				"foo": {Type: cty.String, Optional: true},
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		Provider: providers.Schema{
+			Block: &configschema.Block{
+				Attributes: map[string]*configschema.Attribute{
+					"foo": {Type: cty.String, Optional: true},
+				},
 			},
 		},
-		ResourceTypes: map[string]*configschema.Block{
+		ResourceTypes: map[string]providers.Schema{
 			"test_instance": {
-				Attributes: map[string]*configschema.Attribute{
-					"id": {Type: cty.String, Optional: true, Computed: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"id": {Type: cty.String, Optional: true, Computed: true},
+					},
 				},
 			},
 		},
 	}
 
 	configured := false
-	p.ConfigureNewFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
+	p.ConfigureFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
 		var diags tfdiags.Diagnostics
 		configured = true
 		if got, want := req.Config.GetAttr("foo"), cty.StringVal("bar"); !want.RawEquals(got) {
@@ -412,7 +425,7 @@ func TestImport_providerConfigWithDataSource(t *testing.T) {
 	}
 
 	p.ImportResourceStateFn = nil
-	p.ImportResourceStateResponse = providers.ImportResourceStateResponse{
+	p.ImportResourceStateResponse = &providers.ImportResourceStateResponse{
 		ImportedResources: []providers.ImportedResource{
 			{
 				TypeName: "test_instance",
@@ -422,23 +435,29 @@ func TestImport_providerConfigWithDataSource(t *testing.T) {
 			},
 		},
 	}
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		Provider: &configschema.Block{
-			Attributes: map[string]*configschema.Attribute{
-				"foo": {Type: cty.String, Optional: true},
-			},
-		},
-		ResourceTypes: map[string]*configschema.Block{
-			"test_instance": {
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		Provider: providers.Schema{
+			Block: &configschema.Block{
 				Attributes: map[string]*configschema.Attribute{
-					"id": {Type: cty.String, Optional: true, Computed: true},
+					"foo": {Type: cty.String, Optional: true},
 				},
 			},
 		},
-		DataSources: map[string]*configschema.Block{
+		ResourceTypes: map[string]providers.Schema{
+			"test_instance": {
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"id": {Type: cty.String, Optional: true, Computed: true},
+					},
+				},
+			},
+		},
+		DataSources: map[string]providers.Schema{
 			"test_data": {
-				Attributes: map[string]*configschema.Attribute{
-					"id": {Type: cty.String, Optional: true, Computed: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"foo": {Type: cty.String, Optional: true},
+					},
 				},
 			},
 		},
@@ -469,7 +488,7 @@ func TestImport_providerConfigWithVarDefault(t *testing.T) {
 	}
 
 	p.ImportResourceStateFn = nil
-	p.ImportResourceStateResponse = providers.ImportResourceStateResponse{
+	p.ImportResourceStateResponse = &providers.ImportResourceStateResponse{
 		ImportedResources: []providers.ImportedResource{
 			{
 				TypeName: "test_instance",
@@ -479,23 +498,27 @@ func TestImport_providerConfigWithVarDefault(t *testing.T) {
 			},
 		},
 	}
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		Provider: &configschema.Block{
-			Attributes: map[string]*configschema.Attribute{
-				"foo": {Type: cty.String, Optional: true},
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		Provider: providers.Schema{
+			Block: &configschema.Block{
+				Attributes: map[string]*configschema.Attribute{
+					"foo": {Type: cty.String, Optional: true},
+				},
 			},
 		},
-		ResourceTypes: map[string]*configschema.Block{
+		ResourceTypes: map[string]providers.Schema{
 			"test_instance": {
-				Attributes: map[string]*configschema.Attribute{
-					"id": {Type: cty.String, Optional: true, Computed: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"id": {Type: cty.String, Optional: true, Computed: true},
+					},
 				},
 			},
 		},
 	}
 
 	configured := false
-	p.ConfigureNewFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
+	p.ConfigureFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
 		var diags tfdiags.Diagnostics
 		configured = true
 		if got, want := req.Config.GetAttr("foo"), cty.StringVal("bar"); !want.RawEquals(got) {
@@ -542,7 +565,7 @@ func TestImport_providerConfigWithVarFile(t *testing.T) {
 	}
 
 	p.ImportResourceStateFn = nil
-	p.ImportResourceStateResponse = providers.ImportResourceStateResponse{
+	p.ImportResourceStateResponse = &providers.ImportResourceStateResponse{
 		ImportedResources: []providers.ImportedResource{
 			{
 				TypeName: "test_instance",
@@ -552,23 +575,27 @@ func TestImport_providerConfigWithVarFile(t *testing.T) {
 			},
 		},
 	}
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		Provider: &configschema.Block{
-			Attributes: map[string]*configschema.Attribute{
-				"foo": {Type: cty.String, Optional: true},
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		Provider: providers.Schema{
+			Block: &configschema.Block{
+				Attributes: map[string]*configschema.Attribute{
+					"foo": {Type: cty.String, Optional: true},
+				},
 			},
 		},
-		ResourceTypes: map[string]*configschema.Block{
+		ResourceTypes: map[string]providers.Schema{
 			"test_instance": {
-				Attributes: map[string]*configschema.Attribute{
-					"id": {Type: cty.String, Optional: true, Computed: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"id": {Type: cty.String, Optional: true, Computed: true},
+					},
 				},
 			},
 		},
 	}
 
 	configured := false
-	p.ConfigureNewFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
+	p.ConfigureFn = func(req providers.ConfigureRequest) providers.ConfigureResponse {
 		var diags tfdiags.Diagnostics
 		configured = true
 		if got, want := req.Config.GetAttr("foo"), cty.StringVal("bar"); !want.RawEquals(got) {
@@ -616,7 +643,7 @@ func TestImport_allowMissingResourceConfig(t *testing.T) {
 	}
 
 	p.ImportResourceStateFn = nil
-	p.ImportResourceStateResponse = providers.ImportResourceStateResponse{
+	p.ImportResourceStateResponse = &providers.ImportResourceStateResponse{
 		ImportedResources: []providers.ImportedResource{
 			{
 				TypeName: "test_instance",
@@ -626,11 +653,13 @@ func TestImport_allowMissingResourceConfig(t *testing.T) {
 			},
 		},
 	}
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		ResourceTypes: map[string]*configschema.Block{
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		ResourceTypes: map[string]providers.Schema{
 			"test_instance": {
-				Attributes: map[string]*configschema.Attribute{
-					"id": {Type: cty.String, Optional: true, Computed: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"id": {Type: cty.String, Optional: true, Computed: true},
+					},
 				},
 			},
 		},
@@ -746,18 +775,20 @@ func TestImport_missingModuleConfig(t *testing.T) {
 
 func TestImportModuleVarFile(t *testing.T) {
 	td := tempDir(t)
-	copy.CopyDir(testFixturePath("import-module-var-file"), td)
+	testCopyDir(t, testFixturePath("import-module-var-file"), td)
 	defer os.RemoveAll(td)
 	defer testChdir(t, td)()
 
 	statePath := testTempFile(t)
 
 	p := testProvider()
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		ResourceTypes: map[string]*configschema.Block{
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		ResourceTypes: map[string]providers.Schema{
 			"test_instance": {
-				Attributes: map[string]*configschema.Attribute{
-					"foo": {Type: cty.String, Optional: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"foo": {Type: cty.String, Optional: true},
+					},
 				},
 			},
 		},
@@ -816,18 +847,20 @@ func TestImportModuleVarFile(t *testing.T) {
 // module of {} causes this local evaluation to error, breaking import.
 func TestImportModuleInputVariableEvaluation(t *testing.T) {
 	td := tempDir(t)
-	copy.CopyDir(testFixturePath("import-module-input-variable"), td)
+	testCopyDir(t, testFixturePath("import-module-input-variable"), td)
 	defer os.RemoveAll(td)
 	defer testChdir(t, td)()
 
 	statePath := testTempFile(t)
 
 	p := testProvider()
-	p.GetSchemaReturn = &terraform.ProviderSchema{
-		ResourceTypes: map[string]*configschema.Block{
+	p.GetSchemaResponse = &providers.GetSchemaResponse{
+		ResourceTypes: map[string]providers.Schema{
 			"test_instance": {
-				Attributes: map[string]*configschema.Attribute{
-					"foo": {Type: cty.String, Optional: true},
+				Block: &configschema.Block{
+					Attributes: map[string]*configschema.Attribute{
+						"foo": {Type: cty.String, Optional: true},
+					},
 				},
 			},
 		},
@@ -966,16 +999,4 @@ const testImportStr = `
 test_instance.foo:
   ID = yay
   provider = provider["registry.terraform.io/hashicorp/test"]
-`
-
-const testImportCustomProviderStr = `
-test_instance.foo:
-  ID = yay
-  provider = provider["registry.terraform.io/hashicorp/test"].alias
-`
-
-const testImportProviderMismatchStr = `
-test_instance.foo:
-  ID = yay
-  provider = provider["registry.terraform.io/hashicorp/test-beta"]
 `

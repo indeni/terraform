@@ -30,7 +30,9 @@ func SearchLocalDirectory(baseDir string) (map[addrs.Provider]PackageMetaList, e
 	// symlink to help Terraform find them anyway.
 	originalBaseDir := baseDir
 	if finalDir, err := filepath.EvalSymlinks(baseDir); err == nil {
-		log.Printf("[TRACE] getproviders.SearchLocalDirectory: %s is a symlink to %s", baseDir, finalDir)
+		if finalDir != filepath.Clean(baseDir) {
+			log.Printf("[TRACE] getproviders.SearchLocalDirectory: using %s instead of %s", finalDir, baseDir)
+		}
 		baseDir = finalDir
 	} else {
 		// We'll eat this particular error because if we're somehow able to
@@ -118,7 +120,8 @@ func SearchLocalDirectory(baseDir string) (map[addrs.Provider]PackageMetaList, e
 		// filesystem object below.
 		info, err = os.Stat(fullPath)
 		if err != nil {
-			return fmt.Errorf("failed to read metadata about %s: %s", fullPath, err)
+			log.Printf("[WARN] failed to read metadata about %s: %s", fullPath, err)
+			return nil
 		}
 
 		switch len(parts) {

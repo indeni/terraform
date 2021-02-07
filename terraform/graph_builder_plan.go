@@ -115,10 +115,6 @@ func (b *PlanGraphBuilder) Steps() []GraphTransformer {
 		// Attach the configuration to any resources
 		&AttachResourceConfigTransformer{Config: b.Config},
 
-		// Provisioner-related transformations
-		&MissingProvisionerTransformer{Provisioners: b.Components.ResourceProvisioners()},
-		&ProvisionerTransformer{},
-
 		// add providers
 		TransformProviders(b.Components.ResourceProviders(), b.ConcreteProvider, b.Config),
 
@@ -162,7 +158,7 @@ func (b *PlanGraphBuilder) Steps() []GraphTransformer {
 		&CloseRootModuleTransformer{},
 
 		// Perform the transitive reduction to make our graph a bit
-		// more sane if possible (it usually is possible).
+		// more understandable if possible (it usually is possible).
 		&TransitiveReductionTransformer{},
 	}
 
@@ -191,6 +187,7 @@ func (b *PlanGraphBuilder) init() {
 	b.ConcreteResourceOrphan = func(a *NodeAbstractResourceInstance) dag.Vertex {
 		return &NodePlannableResourceInstanceOrphan{
 			NodeAbstractResourceInstance: a,
+			skipRefresh:                  b.skipRefresh,
 		}
 	}
 }

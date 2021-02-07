@@ -47,21 +47,6 @@ func (c *PlanCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Check if the path is a plan, which is not permitted
-	planFileReader, err := c.PlanFile(configPath)
-	if err != nil {
-		c.Ui.Error(err.Error())
-		return 1
-	}
-	if planFileReader != nil {
-		c.showDiagnostics(tfdiags.Sourceless(
-			tfdiags.Error,
-			"Invalid configuration directory",
-			fmt.Sprintf("Cannot pass a saved plan file to the 'terraform plan' command. To apply a saved plan, use: terraform apply %s", configPath),
-		))
-		return 1
-	}
-
 	var diags tfdiags.Diagnostics
 
 	var backendConfig *configs.Backend
@@ -191,14 +176,14 @@ func (c *PlanCommand) Run(args []string) int {
 
 func (c *PlanCommand) Help() string {
 	helpText := `
-Usage: terraform plan [options] [DIR]
+Usage: terraform plan [options]
 
-  Generates an execution plan for Terraform.
+  Generates a speculative execution plan, showing what actions Terraform
+  would take to apply the current configuration. This command will not
+  actually perform the planned actions.
 
-  This execution plan can be reviewed prior to running apply to get a
-  sense for what Terraform will do. Optionally, the plan can be saved to
-  a Terraform plan file, and apply can take this plan file to execute
-  this plan exactly.
+  You can optionally save the plan to a file, which you can then pass to
+  the "apply" command to perform exactly the actions described in the plan.
 
 Options:
 
@@ -249,5 +234,5 @@ Options:
 }
 
 func (c *PlanCommand) Synopsis() string {
-	return "Generate and show an execution plan"
+	return "Show changes required by the current configuration"
 }

@@ -7,6 +7,8 @@ package backend
 import (
 	"context"
 	"errors"
+	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/hashicorp/terraform/addrs"
@@ -20,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform/states/statemgr"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/terraform/tfdiags"
+	"github.com/mitchellh/go-homedir"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -185,12 +188,11 @@ type Operation struct {
 
 	// The options below are more self-explanatory and affect the runtime
 	// behavior of the operation.
-	AutoApprove  bool
-	Destroy      bool
-	DestroyForce bool
-	Parallelism  int
-	Targets      []addrs.Targetable
-	Variables    map[string]UnparsedVariableValue
+	AutoApprove bool
+	Destroy     bool
+	Parallelism int
+	Targets     []addrs.Targetable
+	Variables   map[string]UnparsedVariableValue
 
 	// Some operations use root module variables only opportunistically or
 	// don't need them at all. If this flag is set, the backend must treat
@@ -286,4 +288,32 @@ const (
 
 func (r OperationResult) ExitStatus() int {
 	return int(r)
+}
+
+// If the argument is a path, Read loads it and returns the contents,
+// otherwise the argument is assumed to be the desired contents and is simply
+// returned.
+func ReadPathOrContents(poc string) (string, error) {
+	if len(poc) == 0 {
+		return poc, nil
+	}
+
+	path := poc
+	if path[0] == '~' {
+		var err error
+		path, err = homedir.Expand(path)
+		if err != nil {
+			return path, err
+		}
+	}
+
+	if _, err := os.Stat(path); err == nil {
+		contents, err := ioutil.ReadFile(path)
+		if err != nil {
+			return string(contents), err
+		}
+		return string(contents), nil
+	}
+
+	return poc, nil
 }

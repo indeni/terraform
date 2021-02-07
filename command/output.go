@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/convert"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 
-	"github.com/hashicorp/terraform/addrs"
 	"github.com/hashicorp/terraform/repl"
 	"github.com/hashicorp/terraform/states"
 	"github.com/hashicorp/terraform/tfdiags"
@@ -17,16 +18,20 @@ import (
 // from a Terraform state and prints it.
 type OutputCommand struct {
 	Meta
+
+	// Unit tests may set rawPrint to capture the output from the -raw
+	// option, which would normally go to stdout directly.
+	rawPrint func(string)
 }
 
 func (c *OutputCommand) Run(args []string) int {
 	args = c.Meta.process(args)
-	var module, statePath string
-	var jsonOutput bool
+	var statePath string
+	var jsonOutput, rawOutput bool
 	cmdFlags := c.Meta.defaultFlagSet("output")
 	cmdFlags.BoolVar(&jsonOutput, "json", false, "json")
+	cmdFlags.BoolVar(&rawOutput, "raw", false, "raw")
 	cmdFlags.StringVar(&statePath, "state", "", "path")
-	cmdFlags.StringVar(&module, "module", "", "module")
 	cmdFlags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := cmdFlags.Parse(args); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error parsing command-line flags: %s\n", err.Error()))
@@ -38,6 +43,18 @@ func (c *OutputCommand) Run(args []string) int {
 		c.Ui.Error(
 			"The output command expects exactly one argument with the name\n" +
 				"of an output variable or no arguments to show all outputs.\n")
+		cmdFlags.Usage()
+		return 1
+	}
+
+	if jsonOutput && rawOutput {
+		c.Ui.Error("The -raw and -json options are mutually-exclusive.\n")
+		cmdFlags.Usage()
+		return 1
+	}
+
+	if rawOutput && len(args) == 0 {
+		c.Ui.Error("You must give the name of a single output value when using the -raw option.\n")
 		cmdFlags.Usage()
 		return 1
 	}
@@ -61,6 +78,9 @@ func (c *OutputCommand) Run(args []string) int {
 		return 1
 	}
 
+	// This is a read-only command
+	c.ignoreRemoteBackendVersionConflict(b)
+
 	env, err := c.Workspace()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error selecting workspace: %s", err))
@@ -79,35 +99,12 @@ func (c *OutputCommand) Run(args []string) int {
 		return 1
 	}
 
-	moduleAddr := addrs.RootModuleInstance
-	if module != "" {
-		// This option was supported prior to 0.12.0, but no longer supported
-		// because we only persist the root module outputs in state.
-		// (We could perhaps re-introduce this by doing an eval walk here to
-		// repopulate them, similar to how "terraform console" does it, but
-		// that requires more thought since it would imply this command
-		// supporting remote operations, which is a big change.)
-		diags = diags.Append(tfdiags.Sourceless(
-			tfdiags.Error,
-			"Unsupported option",
-			"The -module option is no longer supported since Terraform 0.12, because now only root outputs are persisted in the state.",
-		))
-		c.showDiagnostics(diags)
-		return 1
-	}
-
 	state := stateStore.State()
 	if state == nil {
 		state = states.NewState()
 	}
 
-	mod := state.Module(moduleAddr)
-	if mod == nil {
-		c.Ui.Error(fmt.Sprintf(
-			"The module %s could not be found. There is nothing to output.",
-			module))
-		return 1
-	}
+	mod := state.RootModule()
 
 	if !jsonOutput && (state.Empty() || len(mod.OutputValues) == 0) {
 		diags = diags.Append(tfdiags.Sourceless(
@@ -168,7 +165,7 @@ func (c *OutputCommand) Run(args []string) int {
 			c.Ui.Output(string(jsonOutputs))
 			return 0
 		} else {
-			c.Ui.Output(outputsAsString(state, moduleAddr, false))
+			c.Ui.Output(outputsAsString(state, false))
 			return 0
 		}
 	}
@@ -184,14 +181,65 @@ func (c *OutputCommand) Run(args []string) int {
 	}
 	v := os.Value
 
-	if jsonOutput {
+	switch {
+	case jsonOutput:
 		jsonOutput, err := ctyjson.Marshal(v, v.Type())
 		if err != nil {
 			return 1
 		}
 
 		c.Ui.Output(string(jsonOutput))
-	} else {
+	case rawOutput:
+		strV, err := convert.Convert(v, cty.String)
+		if err != nil {
+			diags = diags.Append(tfdiags.Sourceless(
+				tfdiags.Error,
+				"Unsupported value for raw output",
+				fmt.Sprintf(
+					"The -raw option only supports strings, numbers, and boolean values, but output value %q is %s.\n\nUse the -json option for machine-readable representations of output values that have complex types.",
+					name, v.Type().FriendlyName(),
+				),
+			))
+			c.showDiagnostics(diags)
+			return 1
+		}
+		if strV.IsNull() {
+			diags = diags.Append(tfdiags.Sourceless(
+				tfdiags.Error,
+				"Unsupported value for raw output",
+				fmt.Sprintf(
+					"The value for output value %q is null, so -raw mode cannot print it.",
+					name,
+				),
+			))
+			c.showDiagnostics(diags)
+			return 1
+		}
+		if !strV.IsKnown() {
+			// Since we're working with values from the state it would be very
+			// odd to end up in here, but we'll handle it anyway to avoid a
+			// panic in case our rules somehow change in future.
+			diags = diags.Append(tfdiags.Sourceless(
+				tfdiags.Error,
+				"Unsupported value for raw output",
+				fmt.Sprintf(
+					"The value for output value %q won't be known until after a successful terraform apply, so -raw mode cannot print it.",
+					name,
+				),
+			))
+			c.showDiagnostics(diags)
+			return 1
+		}
+		// If we get out here then we should have a valid string to print.
+		// We're writing it directly to the output here so that a shell caller
+		// will get exactly the value and no extra whitespace.
+		str := strV.AsString()
+		if c.rawPrint != nil {
+			c.rawPrint(str)
+		} else {
+			fmt.Print(str)
+		}
+	default:
 		result := repl.FormatValue(v, 0)
 		c.Ui.Output(result)
 	}
@@ -216,12 +264,16 @@ Options:
   -no-color        If specified, output won't contain any color.
 
   -json            If specified, machine readable output will be
-                   printed in JSON format
+                   printed in JSON format.
 
+  -raw             For value types that can be automatically
+                   converted to a string, will print the raw
+                   string directly, rather than a human-oriented
+                   representation of the value.
 `
 	return strings.TrimSpace(helpText)
 }
 
 func (c *OutputCommand) Synopsis() string {
-	return "Read an output from a state file"
+	return "Show output values from your root module"
 }

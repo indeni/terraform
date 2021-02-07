@@ -31,7 +31,7 @@ func homeDir() (string, error) {
 	// First prefer the HOME environmental variable
 	if home := os.Getenv("HOME"); home != "" {
 		// FIXME: homeDir gets called from globalPluginDirs during init, before
-		// the logging is setup.  We should move meta initializtion outside of
+		// the logging is set up.  We should move meta initializtion outside of
 		// init, but in the meantime we just need to silence this output.
 		//log.Printf("[DEBUG] Detected home directory from env var: %s", home)
 
@@ -49,9 +49,4 @@ func homeDir() (string, error) {
 	}
 
 	return user.HomeDir, nil
-}
-
-func replaceFileAtomic(source, destination string) error {
-	// On Unix systems, a rename is sufficiently atomic.
-	return os.Rename(source, destination)
 }

@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	svchost "github.com/hashicorp/terraform-svchost"
 	"github.com/hashicorp/terraform-svchost/disco"
-	"github.com/hashicorp/terraform/helper/logging"
 	"github.com/hashicorp/terraform/httpclient"
+	"github.com/hashicorp/terraform/internal/logging"
 	"github.com/hashicorp/terraform/registry/regsrc"
 	"github.com/hashicorp/terraform/registry/response"
 	"github.com/hashicorp/terraform/version"
@@ -65,10 +65,6 @@ type Client struct {
 	// services is a required *disco.Disco, which may have services and
 	// credentials pre-loaded.
 	services *disco.Disco
-
-	// retry is the number of retries the client will attempt for each request
-	// if it runs into a transient failure with the remote registry.
-	retry int
 }
 
 // NewClient returns a new initialized registry client.
@@ -87,11 +83,7 @@ func NewClient(services *disco.Disco, client *http.Client) *Client {
 	retryableClient.RequestLogHook = requestLogHook
 	retryableClient.ErrorHandler = maxRetryErrorHandler
 
-	logOutput, err := logging.LogOutput()
-	if err != nil {
-		log.Printf("[WARN] Failed to set up registry client logger, "+
-			"continuing without client logging: %s", err)
-	}
+	logOutput := logging.LogOutput()
 	retryableClient.Logger = log.New(logOutput, "", log.Flags())
 
 	services.Transport = retryableClient.HTTPClient.Transport
