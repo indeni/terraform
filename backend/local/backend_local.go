@@ -3,6 +3,9 @@ package local
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform/addrs"
+	"github.com/hashicorp/terraform/internal/depsfile"
+	"github.com/hashicorp/terraform/providers"
 	"log"
 	"sort"
 
@@ -34,6 +37,18 @@ func (b *Local) Context(op *backend.Operation) (*terraform.Context, statemgr.Ful
 	return ctx, stateMgr, diags
 }
 
+func (b *Local) UpdateProviderResolver(providers map[addrs.Provider]providers.Factory) {
+	if v := b.ContextOpts; v != nil {
+		v.Providers = providers
+	}
+}
+
+func (b *Local) UpdateLockedDependencies(lockedDependencies *depsfile.Locks) {
+	if v := b.ContextOpts; v != nil {
+		v.LockedDependencies = lockedDependencies
+	}
+}
+
 func (b *Local) context(op *backend.Operation) (*terraform.Context, *configload.Snapshot, statemgr.Full, tfdiags.Diagnostics) {
 	var diags tfdiags.Diagnostics
 
@@ -50,6 +65,14 @@ func (b *Local) context(op *backend.Operation) (*terraform.Context, *configload.
 		return nil, nil, nil, diags
 	}
 
+	if op.PlanRefresh {
+		log.Printf("[TRACE] backend/local: reading remote state for workspace %q", op.Workspace)
+		if err := s.RefreshState(); err != nil {
+			diags = diags.Append(errwrap.Wrapf("Error loading state: {{err}}", err))
+			return nil, nil, nil, diags
+		}
+	}
+
 	defer func() {
 		// If we're returning with errors, and thus not producing a valid
 		// context, we'll want to avoid leaving the workspace locked.
@@ -61,10 +84,12 @@ func (b *Local) context(op *backend.Operation) (*terraform.Context, *configload.
 		}
 	}()
 
-	log.Printf("[TRACE] backend/local: reading remote state for workspace %q", op.Workspace)
-	if err := s.RefreshState(); err != nil {
-		diags = diags.Append(errwrap.Wrapf("Error loading state: {{err}}", err))
-		return nil, nil, nil, diags
+	if op.PlanRefresh {
+		log.Printf("[TRACE] backend/local: reading remote state for workspace %q", op.Workspace)
+		if err := s.RefreshState(); err != nil {
+			diags = diags.Append(errwrap.Wrapf("Error loading state: {{err}}", err))
+			return nil, nil, nil, diags
+		}
 	}
 
 	// Initialize our context options
@@ -238,7 +263,7 @@ func (b *Local) contextFromPlanFile(pf *planfile.Reader, opts terraform.ContextO
 	// we do this here anyway to ensure consistent behavior.
 	opts.State = priorStateFile.State
 
-	plan, err := pf.ReadPlan()
+	plan, err := pf.ReadPlan(false)
 	if err != nil {
 		diags = diags.Append(tfdiags.Sourceless(
 			tfdiags.Error,

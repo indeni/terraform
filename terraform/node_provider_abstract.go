@@ -23,6 +23,7 @@ type NodeAbstractProvider struct {
 
 	Config *configs.Provider
 	Schema *configschema.Block
+	Skip bool
 }
 
 var (
@@ -36,6 +37,15 @@ var (
 
 func (n *NodeAbstractProvider) Name() string {
 	return n.Addr.String()
+}
+
+// GraphNodeSubPath
+func (n *NodeAbstractProvider) GetSkip() bool {
+	return n.Skip
+}
+
+func (n *NodeAbstractProvider) SetSkip(skip bool) {
+	n.Skip = skip
 }
 
 // GraphNodeModuleInstance

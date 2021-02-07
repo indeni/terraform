@@ -39,7 +39,7 @@ const (
 func main() {
 	// Override global prefix set by go-dynect during init()
 	log.SetPrefix("")
-	os.Exit(realMain())
+	os.Exit(wrappedMain())
 }
 
 func realMain() int {

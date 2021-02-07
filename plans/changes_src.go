@@ -2,7 +2,6 @@ package plans
 
 import (
 	"fmt"
-
 	"github.com/hashicorp/terraform/addrs"
 	"github.com/hashicorp/terraform/states"
 	"github.com/zclconf/go-cty/cty"
@@ -12,6 +11,7 @@ import (
 // Pass the associated resource type's schema type to method Decode to
 // obtain a ResourceInstanceChange.
 type ResourceInstanceChangeSrc struct {
+
 	// Addr is the absolute address of the resource instance that the change
 	// will apply to.
 	Addr addrs.AbsResourceInstance

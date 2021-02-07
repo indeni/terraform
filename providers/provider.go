@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"github.com/hashicorp/terraform/plans"
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/hashicorp/terraform/configs/configschema"
@@ -283,6 +284,8 @@ type ApplyResourceChangeRequest struct {
 	// each provider, and it should not be used without coordination with
 	// HashiCorp. It is considered experimental and subject to change.
 	ProviderMeta cty.Value
+
+	OldChanges *plans.Changes
 }
 
 type ApplyResourceChangeResponse struct {

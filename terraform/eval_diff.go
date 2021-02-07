@@ -157,6 +157,22 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	if configDiags.HasErrors() {
 		return nil, diags.Err()
 	}
+	var oldResource *plans.ResourceInstanceChange
+	absolutePath := n.Addr.Absolute(ctx.Path()).String()
+	if ctx.SkipReadDataSource() {
+		for _, s := range ctx.GetOldChanges().Resources {
+			if s.Addr.String() == absolutePath {
+				schema, _ := providerSchema.SchemaForResourceType(n.Addr.Resource.Mode, n.Addr.Resource.Type)
+				changeV, _ := s.Decode(schema.ImpliedType())
+				oldResource = changeV
+				break
+			}
+		}
+		if oldResource == nil {
+			log.Printf("no old data was found for " + n.Addr.String())
+		}
+	}
+
 
 	metaConfigVal := cty.NullVal(cty.DynamicPseudoType)
 	if n.ProviderMetas != nil {
@@ -207,22 +223,22 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	unmarkedConfigVal, unmarkedPaths := origConfigVal.UnmarkDeepWithPaths()
 	unmarkedPriorVal, priorPaths := priorVal.UnmarkDeepWithPaths()
 
-	log.Printf("[TRACE] Re-validating config for %q", n.Addr.Absolute(ctx.Path()))
-	// Allow the provider to validate the final set of values.
-	// The config was statically validated early on, but there may have been
-	// unknown values which the provider could not validate at the time.
-	// TODO: It would be more correct to validate the config after
-	// ignore_changes has been applied, but the current implementation cannot
-	// exclude computed-only attributes when given the `all` option.
-	validateResp := provider.ValidateResourceTypeConfig(
-		providers.ValidateResourceTypeConfigRequest{
-			TypeName: n.Addr.Resource.Type,
-			Config:   unmarkedConfigVal,
-		},
-	)
-	if validateResp.Diagnostics.HasErrors() {
-		return nil, validateResp.Diagnostics.InConfigBody(config.Config).Err()
-	}
+	//log.Printf("[TRACE] Re-validating config for %q", n.Addr.Absolute(ctx.Path()))
+	//// Allow the provider to validate the final set of values.
+	//// The config was statically validated early on, but there may have been
+	//// unknown values which the provider could not validate at the time.
+	//// TODO: It would be more correct to validate the config after
+	//// ignore_changes has been applied, but the current implementation cannot
+	//// exclude computed-only attributes when given the `all` option.
+	//validateResp := provider.ValidateResourceTypeConfig(
+	//	providers.ValidateResourceTypeConfigRequest{
+	//		TypeName: n.Addr.Resource.Type,
+	//		Config:   unmarkedConfigVal,
+	//	},
+	//)
+	//if validateResp.Diagnostics.HasErrors() {
+	//	return nil, validateResp.Diagnostics.InConfigBody(config.Config).Err()
+	//}
 
 	// ignore_changes is meant to only apply to the configuration, so it must
 	// be applied before we generate a plan. This ensures the config used for
@@ -259,6 +275,17 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	if diags.HasErrors() {
 		return nil, diags.Err()
 	}
+	if oldResource != nil && !oldResource.After.IsNull() && oldResource.After.IsKnown() {
+		var valAsMap = resp.PlannedState.AsValueMap()
+		var oldResourceAsMap = oldResource.After.AsValueMap()
+		for key := range valAsMap {
+			if valAsMap[key].IsNull() || !valAsMap[key].IsKnown() {
+				valAsMap[key] = oldResourceAsMap[key]
+			}
+		}
+		resp.PlannedState = cty.ObjectVal(valAsMap)
+	}
+
 
 	plannedNewVal := resp.PlannedState
 	plannedPrivate := resp.PlannedPrivate

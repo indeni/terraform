@@ -2,6 +2,7 @@ package command
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/hashicorp/terraform/internal/depsfile"
 	"github.com/hashicorp/terraform/tfdiags"
@@ -46,17 +47,26 @@ func (m *Meta) lockedDependencies() (*depsfile.Locks, tfdiags.Diagnostics) {
 	// with no locks. There is in theory a race condition here in that
 	// the file could be created or removed in the meantime, but we're not
 	// promising to support two concurrent dependency installation processes.
-	_, err := os.Stat(dependencyLockFilename)
+	_, err := os.Stat( m.getDependencyLockFilename())
 	if os.IsNotExist(err) {
 		return depsfile.NewLocks(), nil
 	}
 
-	return depsfile.LoadLocksFromFile(dependencyLockFilename)
+	return depsfile.LoadLocksFromFile( m.getDependencyLockFilename())
 }
 
 // replaceLockedDependencies creates or overwrites the lock file in the
 // current working directory to contain the information recorded in the given
 // locks object.
 func (m *Meta) replaceLockedDependencies(new *depsfile.Locks) tfdiags.Diagnostics {
-	return depsfile.SaveLocksToFile(new, dependencyLockFilename)
+	return depsfile.SaveLocksToFile(new, m.getDependencyLockFilename())
+}
+
+
+func (m *Meta) getDependencyLockFilename() string {
+	if m.OverrideDataDir != "" {
+		return filepath.Join( m.OverrideDataDir, dependencyLockFilename)
+	} else {
+		return dependencyLockFilename
+	}
 }

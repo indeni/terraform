@@ -37,11 +37,13 @@ func (c *InitCommand) Run(args []string) int {
 	var flagFromModule string
 	var flagBackend, flagGet, flagUpgrade, getPlugins bool
 	var flagPluginPath FlagStringSlice
+	var pluginCacheDir string
 	var flagVerifyPlugins bool
 	flagConfigExtra := newRawFlags("-backend-config")
 
 	args = c.Meta.process(args)
 	cmdFlags := c.Meta.extendedFlagSet("init")
+
 	cmdFlags.BoolVar(&flagBackend, "backend", true, "")
 	cmdFlags.Var(flagConfigExtra, "backend-config", "")
 	cmdFlags.StringVar(&flagFromModule, "from-module", "", "copy the source of the given module into the directory before init")
@@ -54,6 +56,7 @@ func (c *InitCommand) Run(args []string) int {
 	cmdFlags.BoolVar(&flagUpgrade, "upgrade", false, "")
 	cmdFlags.Var(&flagPluginPath, "plugin-dir", "plugin directory")
 	cmdFlags.BoolVar(&flagVerifyPlugins, "verify-plugins", true, "verify plugins")
+	cmdFlags.StringVar(&pluginCacheDir, "plugin-cache-dir", "", "plugin cache dir")
 	cmdFlags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := cmdFlags.Parse(args); err != nil {
 		return 1
@@ -73,6 +76,10 @@ func (c *InitCommand) Run(args []string) int {
 			"No-op -get-plugins flag used",
 			`As of Terraform 0.13+, the -get-plugins=false command is a no-op flag. If you would like to customize provider installation, use a provider_installation block or other available Terraform settings.`,
 		))
+	}
+
+	if pluginCacheDir != "" {
+		c.PluginCacheDir = pluginCacheDir
 	}
 
 	// Validate the arg count

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 
 	"github.com/golang/protobuf/proto"
 
@@ -29,7 +30,7 @@ const tfplanFilename = "tfplan"
 // readTfplan reads a protobuf-encoded description from the plan portion of
 // a plan file, which is stored in a special file in the archive called
 // "tfplan".
-func readTfplan(r io.Reader) (*plans.Plan, error) {
+func readTfplan(r io.Reader, parseResourcesFromPlanFile bool) (*plans.Plan, error) {
 	src, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -44,10 +45,11 @@ func readTfplan(r io.Reader) (*plans.Plan, error) {
 	if rawPlan.Version != tfplanFormatVersion {
 		return nil, fmt.Errorf("unsupported plan file format version %d; only version %d is supported", rawPlan.Version, tfplanFormatVersion)
 	}
+	log.Printf("[TRACE] backend/local: building context from plan file")
 
-	if rawPlan.TerraformVersion != version.String() {
-		return nil, fmt.Errorf("plan file was created by Terraform %s, but this is %s; plan files cannot be transferred between different Terraform versions", rawPlan.TerraformVersion, version.String())
-	}
+	//if rawPlan.TerraformVersion != version.String() {
+	//	return nil, fmt.Errorf("plan file was created by Terraform %s, but this is %s; plan files cannot be transferred between different Terraform versions", rawPlan.TerraformVersion, version.String())
+	//}
 
 	plan := &plans.Plan{
 		VariableValues: map[string]plans.DynamicValue{},
@@ -75,15 +77,16 @@ func readTfplan(r io.Reader) (*plans.Plan, error) {
 			Sensitive: rawOC.Sensitive,
 		})
 	}
+	if parseResourcesFromPlanFile {
+		for _, rawRC := range rawPlan.ResourceChanges {
+			change, err := resourceChangeFromTfplan(rawRC)
+			if err != nil {
+				// errors from resourceChangeFromTfplan already include context
+				return nil, err
+			}
 
-	for _, rawRC := range rawPlan.ResourceChanges {
-		change, err := resourceChangeFromTfplan(rawRC)
-		if err != nil {
-			// errors from resourceChangeFromTfplan already include context
-			return nil, err
+			plan.Changes.Resources = append(plan.Changes.Resources, change)
 		}
-
-		plan.Changes.Resources = append(plan.Changes.Resources, change)
 	}
 
 	for _, rawTargetAddr := range rawPlan.TargetAddrs {

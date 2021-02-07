@@ -7,6 +7,8 @@ package backend
 import (
 	"context"
 	"errors"
+	"github.com/hashicorp/terraform/internal/depsfile"
+	"github.com/hashicorp/terraform/providers"
 	"io/ioutil"
 	"os"
 	"time"
@@ -143,6 +145,10 @@ type Local interface {
 	// Context returns a runnable terraform Context. The operation parameter
 	// doesn't need a Type set but it needs other options set such as Module.
 	Context(*Operation) (*terraform.Context, statemgr.Full, tfdiags.Diagnostics)
+
+	UpdateProviderResolver(providers map[addrs.Provider]providers.Factory)
+
+	UpdateLockedDependencies(lockedDependencies *depsfile.Locks)
 }
 
 // An operation represents an operation for Terraform to execute.

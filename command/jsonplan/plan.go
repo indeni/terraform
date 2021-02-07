@@ -265,6 +265,7 @@ func (p *plan) marshalResourceChanges(changes *plans.Changes, schemas *terraform
 	return nil
 }
 
+
 func (p *plan) marshalOutputChanges(changes *plans.Changes) error {
 	if changes == nil {
 		// Nothing to do!

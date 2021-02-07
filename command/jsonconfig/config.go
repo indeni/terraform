@@ -3,6 +3,7 @@ package jsonconfig
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"sort"
 
 	"github.com/zclconf/go-cty/cty"
@@ -49,6 +50,7 @@ type moduleCall struct {
 	Module            module                 `json:"module,omitempty"`
 	VersionConstraint string                 `json:"version_constraint,omitempty"`
 	DependsOn         []string               `json:"depends_on,omitempty"`
+	RawData json.RawMessage `json:"raw_data,omitempty"`
 }
 
 // variables is the JSON representation of the variables provided to the current
@@ -98,6 +100,8 @@ type resource struct {
 	ForEachExpression *expression `json:"for_each_expression,omitempty"`
 
 	DependsOn []string `json:"depends_on,omitempty"`
+
+	RawData json.RawMessage `json:"raw_data,omitempty"`
 }
 
 type output struct {
@@ -239,16 +243,36 @@ func marshalModuleCalls(c *configs.Config, schemas *terraform.Schemas) map[strin
 	return ret
 }
 
+type RawData struct {
+	FileName string
+	StartLine  int
+	EndLine  int
+}
+
+func marshalRawData(config interface{}) ([]byte, error){
+	switch x := config.(type) {
+	case *hclsyntax.Body:
+		sourceRange := x.SrcRange
+		rawData := &RawData{FileName: sourceRange.Filename, StartLine: sourceRange.Start.Line, EndLine: sourceRange.End.Line}
+		return json.Marshal(rawData)
+	}
+	return nil, nil
+}
+
 func marshalModuleCall(c *configs.Config, mc *configs.ModuleCall, schemas *terraform.Schemas) moduleCall {
 	// It is possible to have a module call with a nil config.
 	if c == nil {
 		return moduleCall{}
 	}
 
+	rawData, _ := marshalRawData(mc.Config)
+
 	ret := moduleCall{
 		Source:            mc.SourceAddr,
 		VersionConstraint: mc.Version.Required.String(),
+		RawData: rawData,
 	}
+
 	cExp := marshalExpression(mc.Count)
 	if !cExp.Empty() {
 		ret.CountExpression = &cExp
@@ -290,12 +314,15 @@ func marshalModuleCall(c *configs.Config, mc *configs.ModuleCall, schemas *terra
 
 func marshalResources(resources map[string]*configs.Resource, schemas *terraform.Schemas, moduleAddr string) ([]resource, error) {
 	var rs []resource
+
 	for _, v := range resources {
+		rawData, _ := marshalRawData(v.Config)
 		r := resource{
 			Address:           v.Addr().String(),
 			Type:              v.Type,
 			Name:              v.Name,
 			ProviderConfigKey: opaqueProviderKey(v.ProviderConfigAddr().StringCompact(), moduleAddr),
+			RawData: rawData,
 		}
 
 		switch v.Mode {
