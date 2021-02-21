@@ -65,7 +65,7 @@ func (b *Local) context(op *backend.Operation) (*terraform.Context, *configload.
 		return nil, nil, nil, diags
 	}
 
-	if op.PlanRefresh {
+	if op.Type == backend.OperationTypePlan {
 		log.Printf("[TRACE] backend/local: reading remote state for workspace %q", op.Workspace)
 		if err := s.RefreshState(); err != nil {
 			diags = diags.Append(errwrap.Wrapf("Error loading state: {{err}}", err))
