@@ -78,8 +78,8 @@ func (n *NodePlannableResourceInstanceOrphan) managedResourceExecute(ctx EvalCon
 	if err != nil {
 		return err
 	}
-
-	if !n.skipRefresh {
+	skipRefresh:= true
+	if !skipRefresh && !n.skipRefresh  {
 		// Refresh this instance even though it is going to be destroyed, in
 		// order to catch missing resources. If this is a normal plan,
 		// providers expect a Read request to remove missing resources from the
